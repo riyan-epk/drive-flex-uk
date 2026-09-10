@@ -1,0 +1,35 @@
+﻿## .NET
+obj/
+bin/
+.vs/
+*.user
+*.suo
+.DS_Store
+Thumbs.db
+
+## Secrets - NEVER commit these
+appsettings.Development.json
+appsettings.*.json
+!appsettings.json
+
+## EF migrations lock
+*.db
+*.db-shm
+*.db-wal
+
+## Logs
+logs/
+
+## Publish output
+publish/
+
+## Rider / VS Code
+.idea/
+.vscode/
+
+## Environment
+.env
+.env.*
+
+## Claude Code / local tooling
+.claude/

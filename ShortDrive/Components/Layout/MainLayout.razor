@@ -1,0 +1,113 @@
+@inherits LayoutComponentBase
+@inject NavigationManager Nav
+
+<div class="min-vh-100 d-flex flex-column" style="background-color: var(--df-bg);">
+    <header class="df-navbar">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <a class="df-brand" href="/">
+                    <span class="brand-drive">Drive</span><span class="brand-flex">Flex</span>
+                </a>
+
+                <nav class="d-none d-md-flex align-items-center gap-1">
+                    <NavLink class="df-nav-link" href="/" Match="NavLinkMatch.All">Home</NavLink>
+                    <NavLink class="df-nav-link" href="/quote">Get Covered</NavLink>
+                    <a class="df-nav-link" href="#about">About</a>
+                    <a class="df-nav-link" href="#claims">Claims</a>
+                    <a class="df-nav-link" href="#contact">Contact</a>
+                </nav>
+
+                <div class="d-flex align-items-center gap-2">
+                    <a href="/quote" class="df-btn-nav">
+                        <span>Get a Quote</span>
+                        <span>&rarr;</span>
+                    </a>
+                    <button class="df-mobile-toggle d-md-none" @onclick="ToggleMobileMenu" aria-label="Toggle menu">
+                        <span></span><span></span><span></span>
+                    </button>
+                </div>
+            </div>
+
+            @if (_mobileMenuOpen)
+            {
+                <nav class="df-mobile-nav d-md-none">
+                    <NavLink class="df-mobile-link" href="/" Match="NavLinkMatch.All" @onclick="CloseMobileMenu">Home</NavLink>
+                    <NavLink class="df-mobile-link" href="/quote" @onclick="CloseMobileMenu">Get Covered</NavLink>
+                    <a class="df-mobile-link" href="#about" @onclick="CloseMobileMenu">About</a>
+                    <a class="df-mobile-link" href="#claims" @onclick="CloseMobileMenu">Claims</a>
+                    <a class="df-mobile-link" href="#contact" @onclick="CloseMobileMenu">Contact</a>
+                </nav>
+            }
+        </div>
+    </header>
+
+    <main class="flex-grow-1">
+        @Body
+    </main>
+
+    <footer class="df-footer">
+        <div class="container">
+            <div class="row g-4 mb-4">
+                <div class="col-lg-3 col-md-6">
+                    <div class="footer-brand-col">
+                        <a class="df-brand mb-3 d-inline-block" href="/">
+                            <span class="brand-drive">Drive</span><span class="brand-flex">Flex</span>
+                        </a>
+                        <p class="df-footer-regulatory">
+                            Temporary motor insurance in the UK. Instant comprehensive cover from 1 hour to 28 days.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-2">
+                    <div class="section-label">Cover</div>
+                    <ul class="df-footer-links">
+                        <li><a href="/quote">Car Insurance</a></li>
+                        <li><a href="/quote">Van Insurance</a></li>
+                        <li><a href="/quote">Motorbike Cover</a></li>
+                        <li><a href="/quote">Campervan Cover</a></li>
+                        <li><a href="/quote">Learner Driver</a></li>
+                    </ul>
+                </div>
+                <div class="col-6 col-lg-2">
+                    <div class="section-label">Company</div>
+                    <ul class="df-footer-links">
+                        <li><a href="#about">About Us</a></li>
+                        <li><a href="#claims">Make a Claim</a></li>
+                        <li><a href="#careers">Careers</a></li>
+                        <li><a href="#contact">Contact Us</a></li>
+                    </ul>
+                </div>
+                <div class="col-6 col-lg-2">
+                    <div class="section-label">Legal</div>
+                    <ul class="df-footer-links">
+                        <li><a href="#terms">Terms of Business</a></li>
+                        <li><a href="#privacy">Privacy Policy</a></li>
+                        <li><a href="#cookies">Cookie Policy</a></li>
+                        <li><a href="#fca">FCA Status</a></li>
+                    </ul>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <div class="section-label">Underwriting &amp; Regulatory</div>
+                    <p class="df-footer-regulatory mt-3 mb-2">
+                        Authorised and regulated by the Financial Conduct Authority (FCA).
+                    </p>
+                    <p class="df-footer-regulatory mb-0">
+                        Underwritten by ERS (Syndicate 218 at Lloyd's). Motor Insurance Database (MID) certified.
+                    </p>
+                </div>
+            </div>
+            <div class="df-footer-bottom">
+                <div class="df-footer-bottom-inner">
+                    <span>&copy; @DateTime.UtcNow.Year Drive-Flex. UK Registered Motor Cover.</span>
+                    <span>FCA Firm Reference: 612248</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+</div>
+
+@code {
+    private bool _mobileMenuOpen;
+    private void ToggleMobileMenu() => _mobileMenuOpen = !_mobileMenuOpen;
+    private void CloseMobileMenu() => _mobileMenuOpen = false;
+}

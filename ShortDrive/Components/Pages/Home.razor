@@ -1,0 +1,245 @@
+@page "/"
+@rendermode InteractiveServer
+@inject NavigationManager Nav
+
+<PageTitle>Drive-Flex – Temporary Motor Insurance UK</PageTitle>
+
+<div class="container">
+    <section class="df-hero">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-7">
+                <div class="section-label mb-3">TEMPORARY MOTOR INSURANCE · UNITED KINGDOM</div>
+                <h1 class="df-hero-title">
+                    Flexible cover,<br />
+                    <span class="accent-word">exactly</span> when you need it.
+                </h1>
+                <p class="df-hero-subtitle">
+                    Short-term insurance for cars, vans, bikes and campers. From one hour to twenty-eight days, fully comprehensive, underwritten by ERS and in your inbox in under a minute.
+                </p>
+                <div class="df-trust-badges">
+                    <div class="df-trust-badge">
+                        <span class="badge-dot green"></span>
+                        <span>FCA Authorised</span>
+                    </div>
+                    <div class="df-trust-badge">
+                        <span class="badge-dot blue"></span>
+                        <span>Underwritten by ERS</span>
+                    </div>
+                    <div class="df-trust-badge">
+                        <span class="badge-dot gold"></span>
+                        <span>4.9 on Trustpilot</span>
+                    </div>
+                    <div class="df-trust-badge">
+                        <span class="badge-dot green"></span>
+                        <span>From £8/hr</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="df-widget-card">
+                    <div class="df-widget-header">
+                        <span class="section-label" style="font-size: 0.72rem;">INSTANT QUOTE</span>
+                        <span class="small text-muted" style="font-family: monospace;">@DateTime.UtcNow.Year</span>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold text-muted mb-1">Vehicle</label>
+                        <div class="df-tabs-row">
+                            @foreach (var v in _vehicles)
+                            {
+                                <button type="button"
+                                        class="df-tab-btn @(_selectedClass == v.Name ? "active" : "")"
+                                        @onclick="() => _selectedClass = v.Name">
+                                    <span class="me-1">@v.Icon</span> @v.Name
+                                </button>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label small fw-semibold text-muted mb-0">Registration</label>
+                            <span class="small" style="color: var(--df-success); font-size: 0.75rem; font-weight: 600;">
+                                DVLA verified live
+                            </span>
+                        </div>
+                        <div class="uk-number-plate">
+                            <div class="uk-plate-flag">
+                                <span class="uk-code">UK</span>
+                            </div>
+                            <input type="text"
+                                   class="uk-plate-input"
+                                   placeholder="YOUR REG"
+                                   @bind="_reg"
+                                   @bind:event="oninput"
+                                   @onkeydown="HandleKeyDown"
+                                   maxlength="8"
+                                   autocomplete="off"
+                                   aria-label="UK Vehicle Registration Number" />
+                        </div>
+                        @if (!string.IsNullOrEmpty(_error))
+                        {
+                            <div class="small text-danger mt-1">@_error</div>
+                        }
+                    </div>
+
+                    <button type="button" class="df-btn-cta" @onclick="GoToQuote">
+                        <span>See my price</span>
+                        <span>&rarr;</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="df-stats-strip">
+        <div class="text-center mb-4">
+            <span class="section-label">TRUSTED BY UK DRIVERS</span>
+            <p class="small fw-semibold text-muted mt-1 mb-0">Over <strong>1.8m</strong> policies issued</p>
+        </div>
+        <div class="df-stats-grid">
+            <div class="df-stat-card">
+                <div class="df-stat-value">FCA</div>
+                <div class="df-stat-title">Authorised</div>
+                <div class="df-stat-sub">Firm reference 612248</div>
+            </div>
+            <div class="df-stat-card">
+                <div class="df-stat-value">A+</div>
+                <div class="df-stat-title">Rated Underwriter</div>
+                <div class="df-stat-sub">ERS Lloyd's syndicate</div>
+            </div>
+            <div class="df-stat-card">
+                <div class="df-stat-value">100%</div>
+                <div class="df-stat-title">On the MID</div>
+                <div class="df-stat-sub">Police and ANPR ready</div>
+            </div>
+            <div class="df-stat-card">
+                <div class="df-stat-value">58s</div>
+                <div class="df-stat-title">Median Time to Cover</div>
+                <div class="df-stat-sub">From reg to certificate</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-5 my-3" id="about">
+        <div class="text-center mb-5">
+            <div class="section-label mb-2">MADE FOR THE WAY PEOPLE ACTUALLY DRIVE</div>
+            <h2 class="df-section-heading">
+                Cover for the moments<br />
+                <em>an annual policy can't reach.</em>
+            </h2>
+            <p class="text-secondary mx-auto mt-3" style="font-size: 0.98rem; line-height: 1.6; max-width: 600px;">
+                Annual insurance is great when life runs to schedule. The rest of the time, you need cover that arrives in a minute and disappears when it is done.
+            </p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="df-usecase-card">
+                    <div class="df-usecase-num"><span>01</span></div>
+                    <h3 class="df-usecase-title">Borrowing a Car</h3>
+                    <p class="df-usecase-desc">Drive someone else's car without touching their no-claims bonus.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="df-usecase-card">
+                    <div class="df-usecase-num"><span>02</span></div>
+                    <h3 class="df-usecase-title">Learner Practice</h3>
+                    <p class="df-usecase-desc">Build road hours in a parent's car between driving lessons.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="df-usecase-card">
+                    <div class="df-usecase-num"><span>03</span></div>
+                    <h3 class="df-usecase-title">One-off Van</h3>
+                    <p class="df-usecase-desc">Moving house, picking up a sofa, or covering a single delivery day.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="df-usecase-card">
+                    <div class="df-usecase-num"><span>04</span></div>
+                    <h3 class="df-usecase-title">Bridging the Gap</h3>
+                    <p class="df-usecase-desc">Fill the days between annual policies. No auto-renewal, no chasing.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="df-usecase-card">
+                    <div class="df-usecase-num"><span>05</span></div>
+                    <h3 class="df-usecase-title">Business Trip</h3>
+                    <p class="df-usecase-desc">A work journey your personal policy won't stretch to cover.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="df-usecase-card">
+                    <div class="df-usecase-num"><span>06</span></div>
+                    <h3 class="df-usecase-title">Test Drive</h3>
+                    <p class="df-usecase-desc">Behind the wheel of a private sale you're seriously considering.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-5" id="how-it-works">
+        <div class="text-center mb-4">
+            <div class="section-label mb-2">HOW IT WORKS</div>
+            <h2 class="df-section-heading">Three steps, from driveway to highway.</h2>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="df-step-card">
+                    <div class="df-step-number">1</div>
+                    <h3 class="fw-bold mb-2">Enter Reg</h3>
+                    <p class="text-secondary small mb-0">We look up the DVLA and MOT registers in real time to fetch vehicle details instantly.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="df-step-card">
+                    <div class="df-step-number">2</div>
+                    <h3 class="fw-bold mb-2">Customise</h3>
+                    <p class="text-secondary small mb-0">Pick usage type, cover duration from 1 hour to 28 days, and select optional add-ons.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="df-step-card">
+                    <div class="df-step-number">3</div>
+                    <h3 class="fw-bold mb-2">Insured</h3>
+                    <p class="text-secondary small mb-0">Checkout securely with Stripe. Your Certificate of Motor Insurance is emailed immediately.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+@code {
+    private string _selectedClass = "Car";
+    private string _reg = "";
+    private string? _error;
+
+    private record VehicleType(string Name, string Icon);
+    private readonly VehicleType[] _vehicles =
+    [
+        new("Car", "🚗"),
+        new("Van", "🚐"),
+        new("Bike", "🏍"),
+        new("Camper", "🏕")
+    ];
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            GoToQuote();
+    }
+
+    private void GoToQuote()
+    {
+        var clean = _reg?.Trim().Replace(" ", "").ToUpperInvariant() ?? "";
+        if (string.IsNullOrWhiteSpace(clean))
+        {
+            _error = "Please enter your UK registration plate.";
+            return;
+        }
+
+        Nav.NavigateTo($"/quote?reg={Uri.EscapeDataString(clean)}&class={Uri.EscapeDataString(_selectedClass)}");
+    }
+}

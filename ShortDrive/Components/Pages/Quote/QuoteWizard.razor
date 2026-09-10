@@ -1,0 +1,705 @@
+@page "/quote"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inject DvsaClient Dvsa
+@inject QuoteService QuoteSvc
+@inject PaymentService PaymentSvc
+@inject IEmailSender EmailSvc
+@inject NavigationManager Nav
+@inject VehicleLookupRateLimiter RateLimiter
+@inject IHttpContextAccessor HttpCtx
+
+<PageTitle>Get Covered – Drive-Flex</PageTitle>
+
+<div class="container py-4" style="max-width: 920px; min-height: 80vh;">
+    <div class="wizard-header-strip">
+        <span>Step <strong>@_step</strong> / 5</span>
+        <span class="text-uppercase fw-semibold" style="letter-spacing: 0.05em;">@StepCategoryLabel(_step)</span>
+    </div>
+    <div class="wizard-progress-bar mb-4">
+        <div class="wizard-progress-fill" style="width: @((_step / 5.0) * 100)%"></div>
+    </div>
+
+    @if (_step > 1 && _vehicle is not null)
+    {
+        <div class="wizard-tags-row">
+            <span class="df-pill-tag">@_vehicle.Registration</span>
+            @if (_step > 2)
+            {
+                <span class="df-pill-tag">@_cover.Usage</span>
+            }
+            @if (_step > 3)
+            {
+                <span class="df-pill-tag">@_cover.VehicleClass</span>
+            }
+        </div>
+    }
+
+    @if (_step == 1)
+    {
+        <h1 class="wizard-title">What's your registration?</h1>
+        <p class="wizard-sub">We'll pull your vehicle details from DVLA instantly.</p>
+
+        <div class="uk-number-plate">
+            <div class="uk-plate-flag">
+                <span class="uk-code">UK</span>
+            </div>
+            <input type="text"
+                   class="uk-plate-input"
+                   placeholder="AB12 CDE"
+                   @bind="_regInput"
+                   @bind:event="oninput"
+                   @onkeydown="OnRegKeyDown"
+                   maxlength="10"
+                   aria-label="Vehicle Registration Plate" />
+        </div>
+
+        @if (!string.IsNullOrEmpty(_lookupError))
+        {
+            <div class="alert alert-warning py-2 mb-3" role="alert">@_lookupError</div>
+        }
+
+        <button type="button"
+                class="df-btn-cta df-btn-primary mb-4"
+                @onclick="LookupVehicleAsync"
+                disabled="@_isSearching">
+            @if (_isSearching)
+            {
+                <span class="spinner-border spinner-border-sm me-2"></span>
+                <span>Connecting to DVLA...</span>
+            }
+            else
+            {
+                <span>Find my vehicle &rarr;</span>
+            }
+        </button>
+
+        @if (_vehicle is not null)
+        {
+            <div class="vehicle-dossier-card">
+                <div class="dossier-top">
+                    <span class="section-label">VEHICLE DOSSIER</span>
+                    <div class="dvla-verified-badge">DVLA VERIFIED</div>
+                </div>
+
+                <div class="dossier-title">
+                    <span class="make-bold">@_vehicle.Make</span>
+                    <span class="model-light">@(_vehicle.Model ?? "")</span>
+                </div>
+
+                <div class="dossier-spec-line">
+                    @string.Join(" · ", new[] { _vehicle.Colour, _vehicle.FuelType, _vehicle.YearOfManufacture?.ToString(), _vehicle.BodyType }.Where(s => !string.IsNullOrEmpty(s)))
+                </div>
+
+                <div class="dossier-reg-row">
+                    <div>
+                        <div class="section-label" style="font-size: 0.7rem;">REGISTRATION MARK</div>
+                        <div class="small text-muted">As held on the DVLA register</div>
+                    </div>
+                    <div class="mini-uk-plate">
+                        <span class="mini-uk-flag">UK</span>
+                        <span>@_vehicle.Registration</span>
+                    </div>
+                </div>
+
+                <div class="section-label mb-2">LOGBOOK FIELDS</div>
+                <div class="logbook-grid">
+                    <div class="logbook-item">
+                        <div class="logbook-code">D.1 MAKE</div>
+                        <div class="logbook-val">@_vehicle.Make</div>
+                    </div>
+                    <div class="logbook-item">
+                        <div class="logbook-code">D.2 MODEL</div>
+                        <div class="logbook-val">@(_vehicle.Model ?? "N/A")</div>
+                    </div>
+                    <div class="logbook-item">
+                        <div class="logbook-code">P.5 FIRST REGISTERED</div>
+                        <div class="logbook-val">@(_vehicle.FirstRegistered ?? "N/A")</div>
+                    </div>
+                    <div class="logbook-item">
+                        <div class="logbook-code">P.1 ENGINE</div>
+                        <div class="logbook-val">@(_vehicle.EngineCapacityCc ?? "N/A")</div>
+                    </div>
+                    <div class="logbook-item">
+                        <div class="logbook-code">P.3 FUEL</div>
+                        <div class="logbook-val">@(_vehicle.FuelType ?? "N/A")</div>
+                    </div>
+                    <div class="logbook-item">
+                        <div class="logbook-code">V.7 CO2</div>
+                        <div class="logbook-val">@(_vehicle.Co2Emissions ?? "N/A")</div>
+                    </div>
+                    <div class="logbook-item">
+                        <div class="logbook-code">V.9 EURO CLASS</div>
+                        <div class="logbook-val">@(_vehicle.EuroClass ?? "N/A")</div>
+                    </div>
+                    <div class="logbook-item">
+                        <div class="logbook-code">COLOUR</div>
+                        <div class="logbook-val">@(_vehicle.Colour ?? "N/A")</div>
+                    </div>
+                    <div class="logbook-item">
+                        <div class="logbook-code">K TYPE APPROVAL</div>
+                        <div class="logbook-val">@(_vehicle.TypeApproval ?? "N/A")</div>
+                    </div>
+                </div>
+
+                <div class="dossier-status-row">
+                    <div>
+                        <div class="small text-muted">ROAD TAX</div>
+                        @if (!string.IsNullOrEmpty(_vehicle.TaxStatus))
+                        {
+                            <div class="status-check-badge">@_vehicle.TaxStatus</div>
+                            @if (!string.IsNullOrEmpty(_vehicle.TaxDueDate))
+                            {
+                                <div class="small text-muted">Due @_vehicle.TaxDueDate</div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="small text-muted">Not available</div>
+                        }
+                    </div>
+                    <div>
+                        <div class="small text-muted">MOT</div>
+                        @if (!string.IsNullOrEmpty(_vehicle.MotStatus))
+                        {
+                            <div class="status-check-badge">@_vehicle.MotStatus</div>
+                            @if (!string.IsNullOrEmpty(_vehicle.MotExpiryDate))
+                            {
+                                <div class="small text-muted">Expires @_vehicle.MotExpiryDate</div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="small text-muted">Not available</div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <p class="text-center small text-muted mt-3 mb-0">
+                Vehicle found. Hit Continue below to proceed.
+            </p>
+        }
+    }
+    else if (_step == 2)
+    {
+        <h1 class="wizard-title">What's it for?</h1>
+        <p class="wizard-sub">Select the main purpose of this temporary cover.</p>
+
+        <div class="row g-4 mb-4">
+            <div class="col-md-6">
+                <div class="df-choice-card @(_cover.Usage == "Personal" ? "selected" : "")"
+                     role="button" tabindex="0" aria-pressed="@(_cover.Usage == "Personal")"
+                     @onclick='() => _cover.Usage = "Personal"'
+                     @onkeydown='(e) => SelectOnKey(e, () => _cover.Usage = "Personal")'>
+                    @if (_cover.Usage == "Personal")
+                    {
+                        <div class="df-choice-check">&#10003;</div>
+                    }
+                    <div class="df-choice-icon">&#128100;</div>
+                    <div class="df-choice-title">Personal</div>
+                    <p class="df-choice-desc">Errands, social trips, holidays.</p>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="df-choice-card @(_cover.Usage == "Business" ? "selected" : "")"
+                     role="button" tabindex="0" aria-pressed="@(_cover.Usage == "Business")"
+                     @onclick='() => _cover.Usage = "Business"'
+                     @onkeydown='(e) => SelectOnKey(e, () => _cover.Usage = "Business")'>
+                    @if (_cover.Usage == "Business")
+                    {
+                        <div class="df-choice-check">&#10003;</div>
+                    }
+                    <div class="df-choice-icon">&#128188;</div>
+                    <div class="df-choice-title">Business</div>
+                    <p class="df-choice-desc">Work journeys and deliveries.</p>
+                </div>
+            </div>
+        </div>
+    }
+    else if (_step == 3)
+    {
+        <h1 class="wizard-title">Vehicle class</h1>
+        <p class="wizard-sub">Confirm the type of vehicle you are insuring.</p>
+
+        <div class="row g-3 mb-4">
+            @foreach (var vc in new[] { ("Car", "&#128663;", "Standard passenger car"), ("Van", "&#128665;", "Up to 3.5 tonnes"), ("Bike", "&#127949;", "Motorcycle or scooter"), ("Camper", "&#127968;", "Campervan or motorhome") })
+            {
+                <div class="col-sm-6 col-lg-3">
+                    <div class="df-choice-card @(_cover.VehicleClass == vc.Item1 ? "selected" : "")"
+                         role="button" tabindex="0" aria-pressed="@(_cover.VehicleClass == vc.Item1)"
+                         @onclick="() => _cover.VehicleClass = vc.Item1"
+                         @onkeydown="(e) => SelectOnKey(e, () => _cover.VehicleClass = vc.Item1)">
+                        @if (_cover.VehicleClass == vc.Item1)
+                        {
+                            <div class="df-choice-check">&#10003;</div>
+                        }
+                        <div class="df-choice-icon">@((MarkupString)vc.Item2)</div>
+                        <div class="df-choice-title">@vc.Item1</div>
+                        <p class="df-choice-desc">@vc.Item3</p>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else if (_step == 4)
+    {
+        <h1 class="wizard-title">Driver & Duration</h1>
+        <p class="wizard-sub">Tell us who is driving and how long you need cover.</p>
+
+        <div class="p-4 rounded-4 mb-4" style="background: #ffffff; border: 1px solid var(--df-border);">
+            <div class="section-label mb-2">COVER DURATION</div>
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                @foreach (var opt in new[] { (1, "1 Hour"), (24, "1 Day"), (72, "3 Days"), (168, "7 Days"), (336, "14 Days"), (672, "28 Days") })
+                {
+                    <button type="button" class="df-tab-btn @(_cover.DurationHours == opt.Item1 ? "active" : "")"
+                            style="padding: 0.5rem 1.2rem;" @onclick="() => _cover.DurationHours = opt.Item1">@opt.Item2</button>
+                }
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold text-muted">Cover start time</label>
+                    <input type="datetime-local" class="form-control"
+                           value="@_cover.StartDateLocal.ToString("yyyy-MM-ddTHH:mm")"
+                           min="@UkTime.Now.ToString("yyyy-MM-ddTHH:mm")"
+                           @onchange="OnStartDateChanged" />
+                    <div class="form-text small">Times are UK time.</div>
+                </div>
+                <div class="col-md-6 d-flex align-items-end">
+                    <div class="small text-muted">
+                        Selected: <strong>@_cover.DurationLabel</strong> starting @_cover.StartDateLocal.ToString("dd MMM yyyy, HH:mm")
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4 rounded-4" style="background: #ffffff; border: 1px solid var(--df-border);">
+            <div class="section-label mb-3">DRIVER PARTICULARS</div>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold text-muted">First name</label>
+                    <input type="text" class="form-control" @bind="_driver.FirstName" placeholder="e.g. John" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold text-muted">Last name</label>
+                    <input type="text" class="form-control" @bind="_driver.LastName" placeholder="e.g. Smith" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold text-muted">Email address (for certificate)</label>
+                    <input type="email" class="form-control" @bind="_customerEmail" placeholder="john.smith@example.co.uk" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold text-muted">Date of birth</label>
+                    <input type="date" class="form-control" @bind="_driver.DateOfBirth" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold text-muted">UK Driving Licence Number</label>
+                    <input type="text" class="form-control text-uppercase" @bind="_driver.LicenceNumber" placeholder="SMITH751010AB9CD" />
+                </div>
+                <div class="col-12">
+                    <label class="form-label small fw-semibold text-muted">Address line 1</label>
+                    <input type="text" class="form-control" @bind="_driver.AddressLine1" placeholder="e.g. 10 Downing Street" />
+                </div>
+                <div class="col-12">
+                    <label class="form-label small fw-semibold text-muted">Address line 2 <span class="text-muted">(optional)</span></label>
+                    <input type="text" class="form-control" @bind="_driver.AddressLine2" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold text-muted">City / Town</label>
+                    <input type="text" class="form-control" @bind="_driver.City" placeholder="e.g. London" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold text-muted">Postcode</label>
+                    <input type="text" class="form-control text-uppercase" @bind="_driver.Postcode" placeholder="SW1A 1AA" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label small fw-semibold text-muted">Years licence held</label>
+                    <input type="number" class="form-control" @bind="_driver.YearsLicenceHeld" min="0" max="60" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold text-muted">Claims (last 5 yrs)</label>
+                    <input type="number" class="form-control" @bind="_driver.ClaimsLast5Years" min="0" max="10" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label small fw-semibold text-muted">Convictions (last 5 yrs)</label>
+                    <input type="number" class="form-control" @bind="_driver.ConvictionsLast5Years" min="0" max="10" />
+                </div>
+            </div>
+        </div>
+    }
+    else if (_step == 5)
+    {
+        <div class="quote-hero-box">
+            <div class="section-label mb-2">YOUR QUOTE · ALL-IN</div>
+            <div class="quote-big-price">
+                <span>£@CurrentCalculatedPrice.ToString("0.00")</span>
+                <span class="all-in-tag">all in</span>
+            </div>
+            <div class="quote-subline">
+                @_cover.DurationLabel of @_cover.VehicleClass cover. No extra fees at checkout — the figure above is exactly what you'll pay.
+            </div>
+        </div>
+
+        <div class="section-label mb-2">WHAT'S INCLUDED</div>
+        <div class="included-grid">
+            <div class="included-item"><span class="clause-code">CL.1</span><span>Fully comprehensive cover</span></div>
+            <div class="included-item"><span class="clause-code">CL.2</span><span>Standard excess @CurrentExcessLabel</span></div>
+            <div class="included-item"><span class="clause-code">CL.3</span><span>Fire &amp; theft protection</span></div>
+            <div class="included-item"><span class="clause-code">CL.4</span><span>Third-party liability</span></div>
+        </div>
+
+        <div class="section-label mb-3">OPTIONAL ADD-ONS</div>
+
+        <div class="addon-card @(_cover.AddOnExcessProtect ? "selected" : "")"
+             role="button" tabindex="0" aria-pressed="@_cover.AddOnExcessProtect"
+             @onclick="() => _cover.AddOnExcessProtect = !_cover.AddOnExcessProtect"
+             @onkeydown="(e) => SelectOnKey(e, () => _cover.AddOnExcessProtect = !_cover.AddOnExcessProtect)">
+            <div class="d-flex align-items-center gap-3">
+                <input type="checkbox" class="addon-checkbox" checked="@_cover.AddOnExcessProtect" />
+                <div>
+                    <div class="fw-semibold small"><span class="text-muted me-1">AD.1</span> Motor Excess Protect</div>
+                    <div class="small text-muted">Reduces your excess to £0</div>
+                </div>
+            </div>
+            <div class="addon-price">+£@(_pricingSettings?.ExcessProtectPrice.ToString("0.00") ?? "5.95")</div>
+        </div>
+
+        <div class="addon-card @(_cover.AddOnRoadside ? "selected" : "")"
+             role="button" tabindex="0" aria-pressed="@_cover.AddOnRoadside"
+             @onclick="() => _cover.AddOnRoadside = !_cover.AddOnRoadside"
+             @onkeydown="(e) => SelectOnKey(e, () => _cover.AddOnRoadside = !_cover.AddOnRoadside)">
+            <div class="d-flex align-items-center gap-3">
+                <input type="checkbox" class="addon-checkbox" checked="@_cover.AddOnRoadside" />
+                <div>
+                    <div class="fw-semibold small"><span class="text-muted me-1">AD.2</span> Roadside &amp; Recovery</div>
+                    <div class="small text-muted">UK-wide breakdown assistance</div>
+                </div>
+            </div>
+            <div class="addon-price">+£@(_pricingSettings?.RoadsideRecoveryPrice.ToString("0.00") ?? "4.95")</div>
+        </div>
+
+        <div class="addon-card @(_cover.AddOnLegal ? "selected" : "")"
+             role="button" tabindex="0" aria-pressed="@_cover.AddOnLegal"
+             @onclick="() => _cover.AddOnLegal = !_cover.AddOnLegal"
+             @onkeydown="(e) => SelectOnKey(e, () => _cover.AddOnLegal = !_cover.AddOnLegal)">
+            <div class="d-flex align-items-center gap-3">
+                <input type="checkbox" class="addon-checkbox" checked="@_cover.AddOnLegal" />
+                <div>
+                    <div class="fw-semibold small"><span class="text-muted me-1">AD.3</span> Legal Expenses</div>
+                    <div class="small text-muted">Up to £100k motor legal</div>
+                </div>
+            </div>
+            <div class="addon-price">+£@(_pricingSettings?.LegalExpensesPrice.ToString("0.00") ?? "2.49")</div>
+        </div>
+
+        <div class="addon-card @(_cover.AddOnComprehensiveUpgrade ? "selected" : "")"
+             role="button" tabindex="0" aria-pressed="@_cover.AddOnComprehensiveUpgrade"
+             @onclick="() => _cover.AddOnComprehensiveUpgrade = !_cover.AddOnComprehensiveUpgrade"
+             @onkeydown="(e) => SelectOnKey(e, () => _cover.AddOnComprehensiveUpgrade = !_cover.AddOnComprehensiveUpgrade)">
+            <div class="d-flex align-items-center gap-3">
+                <input type="checkbox" class="addon-checkbox" checked="@_cover.AddOnComprehensiveUpgrade" />
+                <div>
+                    <div class="fw-semibold small"><span class="text-muted me-1">AD.4</span> Comprehensive Upgrade</div>
+                    <div class="small text-muted">Reduces excess to £250</div>
+                </div>
+            </div>
+            <div class="addon-price">+£@(_pricingSettings?.ComprehensiveUpgradePrice.ToString("0.00") ?? "2.95")</div>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(_paymentError))
+    {
+        <div class="alert alert-danger mt-3" role="alert">@_paymentError</div>
+    }
+</div>
+
+<div class="df-bottom-bar">
+    <div class="container" style="max-width: 920px;">
+        <div class="df-bottom-inner">
+            @if (_step > 1)
+            {
+                <button type="button" class="df-btn-back" @onclick="GoBack">
+                    <span>&larr;</span> <span>Back</span>
+                </button>
+            }
+            else
+            {
+                <div></div>
+            }
+
+            <div class="df-live-price-pill">
+                <span style="color: var(--df-success);">Live price</span>
+                <span class="price-bold">£@CurrentCalculatedPrice.ToString("0.00")</span>
+                <span class="text-muted">all-in</span>
+                <span class="text-muted">|</span>
+                <span class="text-muted">@CurrentExcessLabel excess</span>
+            </div>
+
+            @if (_step == 1)
+            {
+                <button type="button" class="df-btn-continue"
+                        @onclick="NextStep"
+                        disabled="@(_vehicle is null)">
+                    <span>Continue</span>
+                    <span>&rarr;</span>
+                </button>
+            }
+            else if (_step < 5)
+            {
+                <button type="button" class="df-btn-continue" @onclick="NextStep">
+                    <span>Continue</span>
+                    <span>&rarr;</span>
+                </button>
+            }
+            else
+            {
+                <button type="button" class="df-btn-continue" @onclick="ProceedToPayment" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2"></span>
+                        <span>Preparing Checkout...</span>
+                    }
+                    else
+                    {
+                        <span>Pay £@CurrentCalculatedPrice.ToString("0.00") &rarr;</span>
+                    }
+                </button>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "reg")] public string? QueryReg { get; set; }
+    [SupplyParameterFromQuery(Name = "class")] public string? QueryClass { get; set; }
+
+    private int _step = 1;
+    private string _regInput = "";
+    private string _customerEmail = "";
+    private bool _isSearching;
+    private bool _isProcessing;
+    private string? _lookupError;
+    private string? _paymentError;
+
+    private VehicleDto? _vehicle;
+    private DriverFormModel _driver = new();
+    private CoverModel _cover = new();
+    private PricingSettings? _pricingSettings;
+    private QuoteResult? _latestQuote;
+
+    // Rate-limit key for vehicle lookups. Best-effort client IP (available during the
+    // prerender request); falls back to a per-session id so a single wizard session is
+    // still capped at 5 lookups/minute.
+    private string _clientKey = Guid.NewGuid().ToString("N");
+
+    protected override async Task OnInitializedAsync()
+    {
+        var ip = HttpCtx.HttpContext?.Connection.RemoteIpAddress?.ToString();
+        if (!string.IsNullOrWhiteSpace(ip))
+            _clientKey = ip;
+
+        _pricingSettings = await QuoteSvc.GetPricingSettingsAsync();
+
+        if (!string.IsNullOrWhiteSpace(QueryClass))
+            _cover.VehicleClass = QueryClass;
+
+        if (!string.IsNullOrWhiteSpace(QueryReg))
+        {
+            _regInput = QueryReg;
+            await LookupVehicleAsync();
+        }
+    }
+
+    // Uses the same central pricing engine as the persisted quote so the live estimate
+    // always matches the amount actually charged at checkout.
+    private decimal CurrentCalculatedPrice =>
+        QuoteService.ComputePremium(_cover, _driver, _pricingSettings ?? new PricingSettings()).Total;
+
+    private string CurrentExcessLabel =>
+        QuoteService.ComputePremium(_cover, _driver, _pricingSettings ?? new PricingSettings()).ExcessLabel;
+
+    private void OnRegKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+            _ = LookupVehicleAsync();
+    }
+
+    // Keyboard activation for the clickable choice/add-on cards (Enter or Space).
+    private static void SelectOnKey(KeyboardEventArgs e, Action action)
+    {
+        if (e.Key == "Enter" || e.Key == " " || e.Key == "Spacebar")
+            action();
+    }
+
+    private async Task LookupVehicleAsync()
+    {
+        if (_isSearching) return; // guard against overlapping lookups / double submits
+        _lookupError = null;
+        var clean = _regInput?.Trim().Replace(" ", "").ToUpperInvariant() ?? "";
+        if (string.IsNullOrEmpty(clean))
+        {
+            _lookupError = "Please enter a valid UK registration plate.";
+            return;
+        }
+
+        if (!Dvsa.IsValidRegistration(clean))
+        {
+            _lookupError = "Please enter a valid UK registration plate (e.g. AB12 CDE).";
+            return;
+        }
+
+        if (!RateLimiter.IsAllowed(_clientKey))
+        {
+            _lookupError = "Too many lookups. Please wait a minute and try again.";
+            return;
+        }
+
+        _isSearching = true;
+        try
+        {
+            _vehicle = await Dvsa.LookupVehicleAsync(clean);
+            if (_vehicle is null)
+                _lookupError = $"Vehicle '{clean}' not found on DVLA register. Please check the plate.";
+        }
+        catch (ArgumentException ex)
+        {
+            _lookupError = ex.Message;
+        }
+        catch (HttpRequestException)
+        {
+            _lookupError = "Vehicle lookup service is temporarily unavailable. Please try again shortly.";
+        }
+        catch
+        {
+            _lookupError = "An unexpected error occurred during lookup. Please try again.";
+        }
+        finally
+        {
+            _isSearching = false;
+        }
+    }
+
+    private void OnStartDateChanged(ChangeEventArgs e)
+    {
+        if (DateTime.TryParse(e.Value?.ToString(), out var dt))
+            _cover.StartDateLocal = dt;
+    }
+
+    private void NextStep()
+    {
+        if (_step == 1 && _vehicle is null) return;
+        if (_step == 4)
+        {
+            var error = ValidateDriverAndCover();
+            if (error is not null)
+            {
+                _paymentError = error;
+                return;
+            }
+            _paymentError = null;
+        }
+        if (_step < 5) _step++;
+    }
+
+    private void GoBack()
+    {
+        _paymentError = null;
+        if (_step > 1) _step--;
+    }
+
+    // Simple email shape check (defence in depth; the input is type=email client-side).
+    private static readonly System.Text.RegularExpressions.Regex EmailRegex =
+        new(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", System.Text.RegularExpressions.RegexOptions.Compiled);
+
+    private string? ValidateDriverAndCover()
+    {
+        if (string.IsNullOrWhiteSpace(_driver.FirstName) || string.IsNullOrWhiteSpace(_driver.LastName))
+            return "Please fill in your first and last name.";
+
+        if (string.IsNullOrWhiteSpace(_customerEmail) || !EmailRegex.IsMatch(_customerEmail.Trim()))
+            return "Please enter a valid email address for your certificate.";
+
+        if (_driver.DateOfBirth is null)
+            return "Please enter your date of birth.";
+
+        var dob = _driver.DateOfBirth.Value.Date;
+        if (dob >= DateTime.Today)
+            return "Date of birth must be in the past.";
+
+        var age = DateTime.Today.Year - dob.Year;
+        if (dob > DateTime.Today.AddYears(-age)) age--;
+        if (age < 17)
+            return "Drivers must be at least 17 years old to be insured.";
+        if (age > 100)
+            return "Please check the date of birth entered.";
+
+        if (string.IsNullOrWhiteSpace(_driver.LicenceNumber))
+            return "Please enter your driving licence number.";
+
+        if (string.IsNullOrWhiteSpace(_driver.Postcode))
+            return "Please enter your postcode.";
+
+        if (_driver.YearsLicenceHeld < 0 || _driver.YearsLicenceHeld > 80)
+            return "Please enter a valid number of years your licence has been held.";
+        if (_driver.YearsLicenceHeld > age - 16)
+            return "Years licence held cannot exceed the time since you were 16.";
+
+        if (_driver.ClaimsLast5Years < 0 || _driver.ConvictionsLast5Years < 0)
+            return "Claims and convictions cannot be negative.";
+
+        // Cover cannot start in the past (a small grace window absorbs clock skew). UK time.
+        if (_cover.StartDateLocal < UkTime.Now.AddMinutes(-2))
+            return "Cover start time cannot be in the past. Please choose a start time from now onwards.";
+
+        if (_cover.StartDateLocal > UkTime.Now.AddYears(1))
+            return "Cover start time is too far in the future.";
+
+        return null;
+    }
+
+    private async Task ProceedToPayment()
+    {
+        if (_vehicle is null) return;
+        if (_isProcessing) return; // guard against double-click / duplicate checkout sessions
+
+        // Re-validate on the server before taking payment — the UI can be bypassed.
+        var error = ValidateDriverAndCover();
+        if (error is not null)
+        {
+            _paymentError = error;
+            _step = 4; // send the user back to the step where they can fix it
+            return;
+        }
+
+        _isProcessing = true;
+        _paymentError = null;
+
+        try
+        {
+            _latestQuote = await QuoteSvc.CalculateAndSaveAsync(_vehicle, _driver, _cover, _customerEmail);
+
+            var stripeUrl = await PaymentSvc.CreateCheckoutSessionAsync(
+                _latestQuote.QuoteId,
+                _latestQuote.TotalPremium,
+                _latestQuote.DurationLabel,
+                _vehicle.Registration);
+
+            Nav.NavigateTo(stripeUrl, forceLoad: true);
+        }
+        catch
+        {
+            _paymentError = "Unable to start checkout. Please check your details and try again.";
+            _isProcessing = false;
+        }
+    }
+
+    private static string StepCategoryLabel(int step) => step switch
+    {
+        1 => "Vehicle",
+        2 => "Usage",
+        3 => "Cover",
+        4 => "Driver",
+        5 => "Quote",
+        _ => "Drive-Flex"
+    };
+}

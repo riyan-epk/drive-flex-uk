@@ -1,0 +1,584 @@
+@page "/admin"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@using ShortDrive.Data
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@inject AdminAuthService AdminAuth
+@inject QuoteService QuoteSvc
+@inject AppDbContext Db
+@inject IConfiguration Config
+@inject ProtectedSessionStorage SessionStore
+@inject NavigationManager Nav
+
+<PageTitle>Admin Panel – Drive-Flex</PageTitle>
+<HeadContent>
+    <meta name="robots" content="noindex, nofollow" />
+</HeadContent>
+
+@if (!AdminAuth.IsAuthenticated)
+{
+    <div class="container py-5 text-center">
+        <div class="spinner-border" role="status"></div>
+        <p class="mt-2 text-muted small">Redirecting to login...</p>
+    </div>
+}
+else
+{
+    <div class="container py-4" style="max-width: 1080px;">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3 pb-3 border-bottom">
+            <div>
+                <div class="section-label">ADMINISTRATION & UNDERWRITING</div>
+                <h1 class="h3 fw-bold mb-1">Drive-Flex Control Panel</h1>
+                <p class="text-muted small mb-0">Configure pricing, Stripe gateway, vehicle multipliers, and view live quotes.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-dark rounded-pill px-4" @onclick="SaveSettingsAsync" disabled="@_saving">
+                    @if (_saving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                        <span>Saving...</span>
+                    }
+                    else
+                    {
+                        <span>Save All Changes</span>
+                    }
+                </button>
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-3" @onclick="Logout">
+                    Logout
+                </button>
+            </div>
+        </div>
+
+        @if (_savedSuccess)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <strong>Settings updated.</strong> Pricing and Stripe configuration are now live.
+                <button type="button" class="btn-close" @onclick="() => _savedSuccess = false"></button>
+            </div>
+        }
+
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="p-3 bg-white rounded-4 border shadow-sm">
+                    <div class="small text-muted mb-1">Total Quotes</div>
+                    <div class="h3 fw-bold mb-0">@_quotes.Count</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="p-3 bg-white rounded-4 border shadow-sm">
+                    <div class="small text-muted mb-1">Policies Purchased</div>
+                    <div class="h3 fw-bold mb-0 text-success">@_quotes.Count(q => q.Status == QuoteStatus.Purchased)</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="p-3 bg-white rounded-4 border shadow-sm">
+                    <div class="small text-muted mb-1">Total Revenue</div>
+                    <div class="h3 fw-bold mb-0">£@(_quotes.Where(q => q.Status == QuoteStatus.Purchased).Sum(q => q.TotalPremium).ToString("0.00"))</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="p-3 bg-white rounded-4 border shadow-sm">
+                    <div class="small text-muted mb-1">Underwriter</div>
+                    <div class="fw-semibold small text-truncate">@(_settings?.UnderwriterName ?? "ERS Syndicate 218")</div>
+                </div>
+            </div>
+        </div>
+
+        <ul class="nav nav-pills mb-4 gap-2 flex-wrap">
+            <li class="nav-item">
+                <button class="nav-link rounded-pill @(_activeTab == "pricing" ? "active bg-dark" : "text-dark")"
+                        @onclick='() => _activeTab = "pricing"'>
+                    Pricing Engine
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link rounded-pill @(_activeTab == "addons" ? "active bg-dark" : "text-dark")"
+                        @onclick='() => _activeTab = "addons"'>
+                    Optional Add-ons
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link rounded-pill @(_activeTab == "stripe" ? "active bg-dark" : "text-dark")"
+                        @onclick='() => _activeTab = "stripe"'>
+                    Stripe & DVLA
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link rounded-pill @(_activeTab == "email" ? "active bg-dark" : "text-dark")"
+                        @onclick='() => _activeTab = "email"'>
+                    Email (SMTP)
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link rounded-pill @(_activeTab == "security" ? "active bg-dark" : "text-dark")"
+                        @onclick='() => _activeTab = "security"'>
+                    Security
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link rounded-pill @(_activeTab == "quotes" ? "active bg-dark" : "text-dark")"
+                        @onclick='() => _activeTab = "quotes"'>
+                    Policy Book (@_quotes.Count)
+                </button>
+            </li>
+        </ul>
+
+        @if (_activeTab == "pricing" && _settings is not null)
+        {
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="p-4 bg-white rounded-4 border h-100 shadow-sm">
+                        <h5 class="fw-bold mb-3">Duration Base Rates (£)</h5>
+                        <p class="small text-muted">Standard starting rates before risk and class weighting.</p>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">1 Hour Rate (£)</label>
+                            <input type="number" step="0.50" class="form-control" @bind="_settings.OneHourRate" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">1 Day Rate (£)</label>
+                            <input type="number" step="0.50" class="form-control" @bind="_settings.OneDayRate" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">7 Days Rate (£)</label>
+                            <input type="number" step="0.50" class="form-control" @bind="_settings.SevenDayRate" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">28 Days Rate (£)</label>
+                            <input type="number" step="1.00" class="form-control" @bind="_settings.TwentyEightDayRate" />
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="p-4 bg-white rounded-4 border h-100 shadow-sm">
+                        <h5 class="fw-bold mb-3">Class & Usage Multipliers</h5>
+                        <p class="small text-muted">Multiplier applied to base rates (1.0 = standard, 1.25 = +25%).</p>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold">Car (1.0)</label>
+                                <input type="number" step="0.05" class="form-control" @bind="_settings.CarMultiplier" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold">Van</label>
+                                <input type="number" step="0.05" class="form-control" @bind="_settings.VanMultiplier" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold">Bike</label>
+                                <input type="number" step="0.05" class="form-control" @bind="_settings.BikeMultiplier" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold">Camper</label>
+                                <input type="number" step="0.05" class="form-control" @bind="_settings.CamperMultiplier" />
+                            </div>
+                        </div>
+                        <h6 class="fw-bold mt-4 mb-2">Usage Weighting</h6>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold">Personal</label>
+                                <input type="number" step="0.05" class="form-control" @bind="_settings.PersonalMultiplier" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-semibold">Business</label>
+                                <input type="number" step="0.05" class="form-control" @bind="_settings.BusinessMultiplier" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (_activeTab == "addons" && _settings is not null)
+        {
+            <div class="p-4 bg-white rounded-4 border shadow-sm" style="max-width: 680px;">
+                <h5 class="fw-bold mb-3">Optional Add-ons Pricing (£)</h5>
+                <p class="small text-muted">Optional add-ons displayed on the quote summary step.</p>
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">AD.1 Motor Excess Protect (£)</label>
+                    <div class="input-group">
+                        <span class="input-group-text">£</span>
+                        <input type="number" step="0.25" class="form-control" @bind="_settings!.ExcessProtectPrice" />
+                    </div>
+                    <div class="form-text small">Reduces policy excess from £500 to £0.</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">AD.2 Roadside & Recovery (£)</label>
+                    <div class="input-group">
+                        <span class="input-group-text">£</span>
+                        <input type="number" step="0.25" class="form-control" @bind="_settings!.RoadsideRecoveryPrice" />
+                    </div>
+                    <div class="form-text small">UK-wide breakdown and roadside recovery assistance.</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">AD.3 Legal Expenses (£)</label>
+                    <div class="input-group">
+                        <span class="input-group-text">£</span>
+                        <input type="number" step="0.25" class="form-control" @bind="_settings!.LegalExpensesPrice" />
+                    </div>
+                    <div class="form-text small">Up to £100,000 motor legal defense and recovery costs.</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">AD.4 Comprehensive Upgrade (£)</label>
+                    <div class="input-group">
+                        <span class="input-group-text">£</span>
+                        <input type="number" step="0.25" class="form-control" @bind="_settings!.ComprehensiveUpgradePrice" />
+                    </div>
+                    <div class="form-text small">Reduces policy excess from £500 to £250.</div>
+                </div>
+            </div>
+        }
+        else if (_activeTab == "stripe" && _settings is not null)
+        {
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="p-4 bg-white rounded-4 border shadow-sm h-100">
+                        <h5 class="fw-bold mb-3">Stripe Payment Gateway</h5>
+                        <p class="small text-muted">Configure Stripe API credentials for policy checkouts.</p>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Stripe Publishable Key</label>
+                            <input type="text" class="form-control" @bind="_settings.StripePublishableKey" placeholder="pk_test_..." />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Stripe Secret Key</label>
+                            <input type="password" class="form-control" @bind="_settings.StripeSecretKey" placeholder="sk_test_..." />
+                            <div class="form-text small">Secret key is never exposed to the frontend.</div>
+                        </div>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" id="testModeSwitch" @bind="_settings.StripeTestMode" />
+                            <label class="form-check-label small fw-semibold" for="testModeSwitch">Test Mode</label>
+                        </div>
+                        <hr class="my-4" />
+                        <h5 class="fw-bold mb-3">Underwriter & FCA Details</h5>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Underwriter Name</label>
+                            <input type="text" class="form-control" @bind="_settings.UnderwriterName" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">FCA Firm Reference Number</label>
+                            <input type="text" class="form-control" @bind="_settings.FcaFirmReference" />
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="p-4 bg-white rounded-4 border shadow-sm h-100">
+                        <h5 class="fw-bold mb-3">DVLA / DVSA Vehicle API</h5>
+                        <p class="small text-muted">Credentials for the DVSA MOT History API (vehicle lookups). Leave blank to use environment config.</p>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Client ID</label>
+                            <input type="text" class="form-control" @bind="_settings.DvsaClientId" placeholder="Azure AD App Client ID" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Client Secret</label>
+                            <input type="password" class="form-control" @bind="_settings.DvsaClientSecret" placeholder="Azure AD Client Secret" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">API Key (X-API-Key)</label>
+                            <input type="password" class="form-control" @bind="_settings.DvsaApiKey" placeholder="DVSA API Key" />
+                        </div>
+                        <div class="form-text small text-muted">
+                            These credentials are obtained from the DVSA MOT History API portal. The OAuth2 token URL and scope are configured in the server environment.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (_activeTab == "email" && _settings is not null)
+        {
+            <div class="p-4 bg-white rounded-4 border shadow-sm" style="max-width: 680px;">
+                <h5 class="fw-bold mb-3">Email Configuration (SMTP)</h5>
+                <p class="small text-muted">Configure SMTP for sending policy certificates. Leave blank to log-only (development mode).</p>
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">SMTP Host</label>
+                    <input type="text" class="form-control" @bind="_settings.SmtpHost" placeholder="smtp.gmail.com / smtp.sendgrid.net" />
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-8">
+                        <label class="form-label small fw-semibold">SMTP Username</label>
+                        <input type="text" class="form-control" @bind="_settings.SmtpUsername" placeholder="user@domain.com or API key" />
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label small fw-semibold">Port</label>
+                        <input type="number" class="form-control" @bind="_settings.SmtpPort" />
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">SMTP Password</label>
+                    <input type="password" class="form-control" @bind="_settings.SmtpPassword" placeholder="App password or API key" />
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold">From Email</label>
+                        <input type="email" class="form-control" @bind="_settings.SmtpFromEmail" placeholder="noreply@drive-flex.co.uk" />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-semibold">From Name</label>
+                        <input type="text" class="form-control" @bind="_settings.SmtpFromName" />
+                    </div>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="smtpSslSwitch" @bind="_settings.SmtpUseSsl" />
+                    <label class="form-check-label small fw-semibold" for="smtpSslSwitch">Use SSL/TLS</label>
+                </div>
+                <div class="alert alert-info py-2 small mb-0">
+                    <strong>Recommended providers:</strong> SendGrid (free 100/day), Brevo, Mailgun, or Gmail App Passwords. Save and the next policy purchase will send a real email.
+                </div>
+            </div>
+        }
+        else if (_activeTab == "security")
+        {
+            <div class="p-4 bg-white rounded-4 border shadow-sm" style="max-width: 480px;">
+                <h5 class="fw-bold mb-3">Change Admin Password</h5>
+                <p class="small text-muted">Update the password used to access this admin panel.</p>
+
+                @if (_pwdSuccess)
+                {
+                    <div class="alert alert-success py-2 small">Password updated successfully.</div>
+                }
+                @if (_pwdError is not null)
+                {
+                    <div class="alert alert-danger py-2 small">@_pwdError</div>
+                }
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Current Password</label>
+                    <input type="password" class="form-control" @bind="_currentPwd" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">New Password</label>
+                    <input type="password" class="form-control" @bind="_newPwd" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Confirm New Password</label>
+                    <input type="password" class="form-control" @bind="_confirmPwd" />
+                </div>
+                <button type="button" class="btn btn-dark rounded-pill px-4" @onclick="ChangePasswordAsync">
+                    Update Password
+                </button>
+            </div>
+        }
+        else if (_activeTab == "quotes")
+        {
+            <div class="bg-white rounded-4 border shadow-sm overflow-hidden">
+                <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-bold">Policy Register</h6>
+                    <span class="badge bg-secondary">Total: @_quotes.Count</span>
+                </div>
+
+                @if (_quotes.Count == 0)
+                {
+                    <div class="p-5 text-center text-muted">
+                        No quotes generated yet. Visit <a href="/quote">Get Covered</a> to create one.
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light small">
+                                <tr>
+                                    <th>Policy / ID</th>
+                                    <th>Vehicle</th>
+                                    <th>Driver</th>
+                                    <th>Type</th>
+                                    <th>Cover</th>
+                                    <th>Premium</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="small">
+                                @foreach (var q in _quotes)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@(q.PolicyNumber ?? $"#{q.Id}")</strong>
+                                            <div class="text-muted" style="font-size: 0.72rem;">@q.CreatedAt.ToString("dd/MM/yyyy HH:mm")</div>
+                                        </td>
+                                        <td>
+                                            <div class="fw-bold">@q.Vehicle?.Registration</div>
+                                            <div class="text-muted">@q.Vehicle?.Make @q.Vehicle?.Model</div>
+                                        </td>
+                                        <td>
+                                            <div>@q.Driver?.FirstName @q.Driver?.LastName</div>
+                                            <div class="text-muted">@q.Driver?.Postcode</div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark border">@q.VehicleClass</span>
+                                            <span class="badge bg-light text-dark border">@q.Usage</span>
+                                        </td>
+                                        <td>
+                                            <div>@q.DurationHours Hours</div>
+                                            <div class="text-muted">@q.CoverStartUtc.ToString("dd/MM/yyyy")</div>
+                                        </td>
+                                        <td>
+                                            <strong>£@q.TotalPremium.ToString("0.00")</strong>
+                                        </td>
+                                        <td>
+                                            @if (q.Status == QuoteStatus.Purchased)
+                                            {
+                                                <span class="badge bg-success">Purchased</span>
+                                            }
+                                            else if (q.Status == QuoteStatus.Quoted)
+                                            {
+                                                <span class="badge bg-warning text-dark">Quoted</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary">@q.Status</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private string _activeTab = "pricing";
+    private PricingSettings? _settings;
+    private List<Quote> _quotes = new();
+    private bool _saving;
+    private bool _savedSuccess;
+    private bool _sessionChecked;
+
+    private string _currentPwd = "";
+    private string _newPwd = "";
+    private string _confirmPwd = "";
+    private string? _pwdError;
+    private bool _pwdSuccess;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Authenticated within this circuit (arrived from the login page): load immediately.
+        if (AdminAuth.IsAuthenticated)
+            await LoadAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || AdminAuth.IsAuthenticated || _sessionChecked)
+            return;
+
+        _sessionChecked = true;
+
+        // Circuit re-established (e.g. after a full-page refresh): restore auth from the
+        // encrypted per-session marker written at login, otherwise send to the login page.
+        bool restored = false;
+        try
+        {
+            var result = await SessionStore.GetAsync<bool>("df_admin");
+            restored = result.Success && result.Value;
+        }
+        catch { /* storage unavailable — fall through to login */ }
+
+        if (restored)
+        {
+            AdminAuth.RestoreAuthenticated();
+            await LoadAsync();
+            StateHasChanged();
+        }
+        else
+        {
+            Nav.NavigateTo("/admin/login");
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        _settings = await QuoteSvc.GetPricingSettingsAsync();
+        if (string.IsNullOrEmpty(_settings.StripeSecretKey))
+            _settings.StripeSecretKey = Config["Stripe:SecretKey"];
+        if (string.IsNullOrEmpty(_settings.StripePublishableKey))
+            _settings.StripePublishableKey = Config["Stripe:PublishableKey"];
+        if (string.IsNullOrEmpty(_settings.DvsaClientId))
+            _settings.DvsaClientId = Config["Dvsa:ClientId"];
+        if (string.IsNullOrEmpty(_settings.DvsaClientSecret))
+            _settings.DvsaClientSecret = Config["Dvsa:ClientSecret"];
+        if (string.IsNullOrEmpty(_settings.DvsaApiKey))
+            _settings.DvsaApiKey = Config["Dvsa:ApiKey"];
+
+        _quotes = await QuoteSvc.GetAllQuotesAsync();
+    }
+
+    private async Task SaveSettingsAsync()
+    {
+        if (_settings is null) return;
+        _saving = true;
+        _savedSuccess = false;
+
+        // Guard the pricing engine against invalid configuration.
+        _settings.OneHourRate = Math.Max(0, _settings.OneHourRate);
+        _settings.OneDayRate = Math.Max(0, _settings.OneDayRate);
+        _settings.SevenDayRate = Math.Max(0, _settings.SevenDayRate);
+        _settings.TwentyEightDayRate = Math.Max(0, _settings.TwentyEightDayRate);
+        _settings.CarMultiplier = Math.Max(0.01m, _settings.CarMultiplier);
+        _settings.VanMultiplier = Math.Max(0.01m, _settings.VanMultiplier);
+        _settings.BikeMultiplier = Math.Max(0.01m, _settings.BikeMultiplier);
+        _settings.CamperMultiplier = Math.Max(0.01m, _settings.CamperMultiplier);
+        _settings.PersonalMultiplier = Math.Max(0.01m, _settings.PersonalMultiplier);
+        _settings.BusinessMultiplier = Math.Max(0.01m, _settings.BusinessMultiplier);
+        _settings.ExcessProtectPrice = Math.Max(0, _settings.ExcessProtectPrice);
+        _settings.RoadsideRecoveryPrice = Math.Max(0, _settings.RoadsideRecoveryPrice);
+        _settings.LegalExpensesPrice = Math.Max(0, _settings.LegalExpensesPrice);
+        _settings.ComprehensiveUpgradePrice = Math.Max(0, _settings.ComprehensiveUpgradePrice);
+
+        try
+        {
+            await QuoteSvc.UpdatePricingSettingsAsync(_settings);
+            _savedSuccess = true;
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task ChangePasswordAsync()
+    {
+        _pwdError = null;
+        _pwdSuccess = false;
+
+        if (string.IsNullOrWhiteSpace(_currentPwd) || string.IsNullOrWhiteSpace(_newPwd))
+        {
+            _pwdError = "All fields are required.";
+            return;
+        }
+
+        if (_newPwd != _confirmPwd)
+        {
+            _pwdError = "New password and confirmation do not match.";
+            return;
+        }
+
+        if (_newPwd.Length < 8)
+        {
+            _pwdError = "Password must be at least 8 characters.";
+            return;
+        }
+
+        if (!AdminAuth.ValidatePassword(_currentPwd))
+        {
+            _pwdError = "Current password is incorrect.";
+            return;
+        }
+
+        AdminAuth.SetNewPassword(_newPwd);
+        if (_settings is not null)
+        {
+            _settings.AdminPasswordHash = AdminAuthService.HashPasswordForStorage(_newPwd);
+            await QuoteSvc.UpdatePricingSettingsAsync(_settings);
+        }
+
+        _currentPwd = "";
+        _newPwd = "";
+        _confirmPwd = "";
+        _pwdSuccess = true;
+    }
+
+    private async Task Logout()
+    {
+        AdminAuth.Logout();
+        try { await SessionStore.DeleteAsync("df_admin"); } catch { /* ignore */ }
+        Nav.NavigateTo("/admin/login");
+    }
+}

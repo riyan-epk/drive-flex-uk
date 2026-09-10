@@ -1,0 +1,22 @@
+@page "/Error"
+@using System.Diagnostics
+
+<PageTitle>Error – Drive-Flex</PageTitle>
+
+<div class="container py-5" style="max-width: 600px;">
+    <div class="text-center">
+        <h1 class="fw-bold mb-3">Something went wrong</h1>
+        <p class="text-muted mb-4">We encountered an unexpected error. Please try again or contact support if the issue persists.</p>
+        <a href="/" class="btn btn-dark rounded-pill px-4">Return to Home</a>
+    </div>
+</div>
+
+@code{
+    [CascadingParameter]
+    private HttpContext? HttpContext { get; set; }
+
+    private string? RequestId { get; set; }
+
+    protected override void OnInitialized() =>
+        RequestId = Activity.Current?.Id ?? HttpContext?.TraceIdentifier;
+}

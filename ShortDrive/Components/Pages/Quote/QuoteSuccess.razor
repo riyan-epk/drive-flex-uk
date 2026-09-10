@@ -1,0 +1,229 @@
+@page "/quote/success"
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@inject QuoteService QuoteSvc
+@inject PaymentService PaymentSvc
+@inject IEmailSender EmailSvc
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+
+<PageTitle>Certificate of Motor Insurance – Drive-Flex</PageTitle>
+<HeadContent>
+    <meta name="robots" content="noindex, nofollow" />
+</HeadContent>
+
+<div class="container py-5" style="max-width: 860px;">
+    @if (_loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border" style="width: 3rem; height: 3rem; color: var(--df-primary);" role="status"></div>
+            <h4 class="mt-3 fw-bold">Verifying payment...</h4>
+            <p class="text-muted">Securing cover with underwriter and registering on the MID.</p>
+        </div>
+    }
+    else if (_error is not null)
+    {
+        <div class="p-4 rounded-4 text-center bg-white border">
+            <h3 class="fw-bold text-danger mb-3">Notice</h3>
+            <p class="text-muted">@_error</p>
+            <a href="/quote" class="df-btn-cta d-inline-flex" style="width: auto;">Start a new quote</a>
+        </div>
+    }
+    else if (_quote is not null)
+    {
+        <div class="p-4 rounded-4 mb-4 text-center text-white" style="background: linear-gradient(135deg, var(--df-primary) 0%, #0F172A 100%);">
+            <div class="display-5 mb-2">&#10004;</div>
+            <h1 class="fw-bold" style="font-size: 2.4rem;">You are covered.</h1>
+            <p class="mb-0 text-white-50">
+                Your temporary policy is now active. A Certificate of Motor Insurance has been sent to <strong>@_userEmail</strong>.
+            </p>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-success py-2 px-3">Policy Active</span>
+                <span class="small text-muted">MID Confirmed (Police &amp; ANPR Ready)</span>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-dark btn-sm rounded-pill px-3" @onclick="PrintCertificate">
+                    Print / Save PDF
+                </button>
+                <button type="button" class="btn btn-dark btn-sm rounded-pill px-3" @onclick="ResendEmail">
+                    Resend Email
+                </button>
+            </div>
+        </div>
+
+        @if (_emailSentNotice)
+        {
+            <div class="alert alert-success small py-2 mb-3">
+                Certificate email dispatched to <strong>@_userEmail</strong>.
+            </div>
+        }
+
+        <div class="df-certificate-paper" id="printable-certificate">
+            <div class="text-center mb-4">
+                <div class="text-uppercase fw-bold small text-muted" style="letter-spacing: 2px;">Drive-Flex Underwriting Syndicate</div>
+                <h1 class="my-2">CERTIFICATE OF MOTOR INSURANCE</h1>
+                <div class="small text-muted">Issued in accordance with the Road Traffic Acts (Great Britain &amp; Northern Ireland)</div>
+            </div>
+
+            <div class="row g-4 mb-4">
+                <div class="col-sm-6">
+                    <div class="small text-muted text-uppercase fw-bold">Policy / Certificate Number</div>
+                    <div class="h5 fw-bold" style="letter-spacing: 1px;">@_quote.PolicyNumber</div>
+                </div>
+                <div class="col-sm-6 text-sm-end">
+                    <div class="small text-muted text-uppercase fw-bold">Underwriter</div>
+                    <div class="fw-semibold">ERS Syndicate 218 at Lloyd's</div>
+                    <div class="small text-muted">FCA Firm Reference: 612248</div>
+                </div>
+            </div>
+
+            <table class="table table-bordered mb-4" style="border-color: #000;">
+                <tbody>
+                    <tr>
+                        <th style="width: 35%; background: #f8f8f8;">1. Registration Mark of Vehicle</th>
+                        <td class="fw-bold">@_quote.Vehicle?.Registration (@_quote.Vehicle?.Make @_quote.Vehicle?.Model)</td>
+                    </tr>
+                    <tr>
+                        <th style="background: #f8f8f8;">2. Name of Policyholder</th>
+                        <td class="fw-bold">@_quote.Driver?.FirstName @_quote.Driver?.LastName</td>
+                    </tr>
+                    <tr>
+                        <th style="background: #f8f8f8;">3. Effective Date of Commencement</th>
+                        <td><strong>@UkTime.FromUtc(_quote.CoverStartUtc).ToString("dd/MM/yyyy HH:mm") (UK time)</strong></td>
+                    </tr>
+                    <tr>
+                        <th style="background: #f8f8f8;">4. Date of Expiry of Cover</th>
+                        <td><strong>@UkTime.FromUtc(_quote.CoverStartUtc.AddHours(_quote.DurationHours)).ToString("dd/MM/yyyy HH:mm") (UK time)</strong></td>
+                    </tr>
+                    <tr>
+                        <th style="background: #f8f8f8;">5. Persons Entitled to Drive</th>
+                        <td>The Policyholder named above only.</td>
+                    </tr>
+                    <tr>
+                        <th style="background: #f8f8f8;">6. Limitations as to Use</th>
+                        <td>Use for social, domestic and pleasure purposes and commuting. (Usage: @_quote.Usage).</td>
+                    </tr>
+                    <tr>
+                        <th style="background: #f8f8f8;">7. Cover Type &amp; Excess</th>
+                        <td>Comprehensive Cover | Excess: @(_quote.AddOnExcessProtect ? "£0 (Excess Protected)" : _quote.AddOnComprehensiveUpgrade ? "£250" : "£500")</td>
+                    </tr>
+                    <tr>
+                        <th style="background: #f8f8f8;">8. Total Premium Paid</th>
+                        <td class="fw-bold">£@_quote.TotalPremium.ToString("0.00") (Insurance Premium Tax Included)</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="p-3 mb-4" style="background: #f9f9f9; border: 1px solid #ccc; font-size: 0.8rem; line-height: 1.5;">
+                <strong>DECLARATION:</strong> I hereby certify that the Policy to which this Certificate relates satisfies the requirements of the relevant law applicable in Great Britain, Northern Ireland, the Isle of Man, the Island of Guernsey, the Island of Jersey and the Island of Alderney.
+                <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                    <span>Authorized Signatory: <em>ERS Lloyd's Syndicate Registrar</em></span>
+                    <span>Date of Issue: @DateTime.UtcNow.ToString("dd/MM/yyyy")</span>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center small text-muted border-top pt-3">
+                <span>Motor Insurance Database (MID) Status: <strong>LIVE</strong></span>
+                <span>Drive-Flex · Temporary Motor Insurance</span>
+            </div>
+        </div>
+
+        <div class="text-center mt-4 mb-5">
+            <a href="/" class="df-btn-nav d-inline-flex px-4 py-2">
+                <span>Return to Home</span>
+            </a>
+        </div>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "session_id")] public string? SessionId { get; set; }
+    [SupplyParameterFromQuery(Name = "quote_id")] public int QuoteIdParam { get; set; }
+
+    private bool _loading = true;
+    private string? _error;
+    private Quote? _quote;
+    private string _userEmail = "";
+    private bool _emailSentNotice;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (QuoteIdParam == 0 || string.IsNullOrWhiteSpace(SessionId))
+        {
+            _error = "Invalid or missing policy identifier.";
+            _loading = false;
+            return;
+        }
+
+        try
+        {
+            var quote = await QuoteSvc.GetQuoteWithDetailsAsync(QuoteIdParam);
+            if (quote is null)
+            {
+                _error = "Quote not found.";
+                _loading = false;
+                return;
+            }
+
+            // Require the checkout session id to match this quote before revealing any
+            // policy/certificate details — prevents enumerating quote_id to view other
+            // customers' certificates and personal data (IDOR).
+            if (string.IsNullOrWhiteSpace(quote.StripeSessionId) || quote.StripeSessionId != SessionId)
+            {
+                _error = "Payment session does not match this quote.";
+                _loading = false;
+                return;
+            }
+
+            if (quote.Status == QuoteStatus.Purchased)
+            {
+                _quote = quote;
+                _userEmail = quote.CustomerEmail ?? "customer@drive-flex.co.uk";
+                _loading = false;
+                return;
+            }
+
+            var isPaid = await PaymentSvc.VerifySessionPaidAsync(SessionId);
+            if (!isPaid)
+            {
+                _error = "Payment has not been confirmed yet. If you completed payment, please wait a moment and refresh.";
+                _loading = false;
+                return;
+            }
+
+            await QuoteSvc.MarkAsPurchasedAsync(QuoteIdParam, SessionId);
+            _quote = await QuoteSvc.GetQuoteWithDetailsAsync(QuoteIdParam);
+            _userEmail = _quote?.CustomerEmail ?? "customer@drive-flex.co.uk";
+
+            if (_quote is not null && !string.IsNullOrWhiteSpace(_userEmail))
+            {
+                await EmailSvc.SendCertificateEmailAsync(_quote, _userEmail);
+                _emailSentNotice = true;
+            }
+        }
+        catch (Exception)
+        {
+            _error = "Could not finalize policy. Please contact support if payment was taken.";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task PrintCertificate()
+    {
+        await JS.InvokeVoidAsync("window.print");
+    }
+
+    private async Task ResendEmail()
+    {
+        if (_quote is not null && !string.IsNullOrWhiteSpace(_userEmail))
+        {
+            await EmailSvc.SendCertificateEmailAsync(_quote, _userEmail);
+            _emailSentNotice = true;
+        }
+    }
+}
