@@ -46,6 +46,11 @@ Smtp:FromEmail = noreply@yourdomain.com
 Smtp:UseSsl = true
 ```
 
+## Deploying to production
+
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** for the full step-by-step guide (Namecheap DNS +
+Windows Server RDP + IIS + HTTPS + Stripe/DVLA/SMTP).
+
 ## Production build
 
 ```bash
