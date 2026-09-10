@@ -113,16 +113,21 @@
 
 ## 5. What REMAINS to do
 
-### Before real customers (important)
-1. **Switch DB from InMemory → SQLite** (or a real DB). Currently **all quotes/policies are wiped
-   on every app restart.** `Program.cs` has a ready commented block; add the
-   `Microsoft.EntityFrameworkCore.Sqlite` NuGet package and uncomment. *(Not yet done.)*
-2. **Configure SMTP** so certificates actually email (see §6). *(Not done — no SMTP set.)*
-3. **Set production secrets** via env or `appsettings.Production.json`: `Admin:Password`,
-   `App:BaseUrl` (real domain), Stripe keys, DVSA creds, SMTP. *(Placeholders only in repo.)*
-4. **Complete one real test payment** (Stripe test card `4242 4242 4242 4242`) to confirm the
-   full pay → certificate path on the deployed server. *(Not performed.)*
-5. **Deploy to the RDP** and point the domain (see §7).
+### DONE since first status (2026-09-11, round 2)
+- ✅ **DB switched to SQLite** — quotes/policies/settings now persist across restarts
+  (`Program.cs` uses `UseSqlite`; file `driveflex.db`, git-ignored). Verified persistence.
+- ✅ **Secrets configurable via Admin panel with live "Test connection" buttons** —
+  Stripe (validates key), DVLA (validates OAuth + API key), SMTP (sends a test email).
+  All three verified working. DVSA client now reads admin-entered creds (DB) with config fallback.
+
+### Before real customers (your actions)
+1. **Enter your production secrets in the Admin panel** (or env/`appsettings.Production.json`):
+   Admin password, Stripe keys, DVLA creds, SMTP — and use the **Test connection** buttons to
+   confirm each. Set `App:BaseUrl` to your real domain (needed for Stripe redirects).
+2. **Configure SMTP** so certificates actually email (see §6), then hit "Send test email".
+3. **Complete one real test payment** (Stripe test card `4242 4242 4242 4242`) on the deployed
+   server to confirm the full pay → certificate path.
+4. **Deploy to the RDP** and point the domain (see §7).
 
 ### Nice-to-have / lower priority
 - Real Stripe **webhook** handling (currently payment is confirmed by verifying the session on
@@ -139,8 +144,13 @@ An RDP does NOT send email by itself. You need an **SMTP provider**:
 - Recommended: **SendGrid / Brevo / Mailgun** (free tiers), or **Google Workspace / Microsoft 365** if you have business email.
 - Get: host, port (587), username, password, from-address.
 - Add **SPF + DKIM** DNS records for your sending domain (provider supplies them) so mail isn't spam.
-- Enter in **Admin → Email (SMTP)** tab, or in `Smtp:*` config. Then purchases (and "Resend Email") deliver real certificates.
+- Enter in **Admin → Email (SMTP)** tab, click **Send test email** to confirm, then Save.
+  Then purchases (and "Resend Email") deliver real certificates.
 - Note: many VPS/RDP hosts block outbound port 25 — transactional providers use 587/465/2525.
+
+**Test buttons** (Admin panel): Stripe & DVLA tab has "Test Stripe connection" and
+"Test DVLA connection"; Email tab has "Send test email". Use these to verify each integration
+before going live — no need to save first (tests use the values currently in the form).
 
 ---
 

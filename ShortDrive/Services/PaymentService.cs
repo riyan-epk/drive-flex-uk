@@ -85,6 +85,44 @@ public class PaymentService
         return checkoutUrl;
     }
 
+    /// <summary>
+    /// Validates a Stripe secret key by calling the Stripe API. Uses the supplied key, or the
+    /// saved/config key when blank. Returns a human-readable result for the admin panel.
+    /// </summary>
+    public async Task<(bool ok, string message)> TestStripeKeyAsync(string? secretKey, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(secretKey))
+        {
+            var settings = await _db.PricingSettings.FirstOrDefaultAsync(ct);
+            secretKey = !string.IsNullOrWhiteSpace(settings?.StripeSecretKey)
+                ? settings.StripeSecretKey
+                : _config["Stripe:SecretKey"];
+        }
+
+        if (string.IsNullOrWhiteSpace(secretKey))
+            return (false, "No Stripe secret key provided.");
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, "https://api.stripe.com/v1/balance");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", secretKey);
+            using var response = await _http.SendAsync(request, ct);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var mode = secretKey.StartsWith("sk_live", StringComparison.Ordinal) ? "LIVE" : "TEST";
+                return (true, $"Success — Stripe secret key is valid ({mode} mode).");
+            }
+            if ((int)response.StatusCode == 401)
+                return (false, "Invalid Stripe secret key (401 Unauthorized).");
+            return (false, $"Stripe returned HTTP {(int)response.StatusCode}.");
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Could not reach Stripe: {ex.Message}");
+        }
+    }
+
     public async Task<bool> VerifySessionPaidAsync(string sessionId, CancellationToken ct = default)
     {
         var settings = await _db.PricingSettings.FirstOrDefaultAsync(ct);

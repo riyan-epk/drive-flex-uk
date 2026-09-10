@@ -56,7 +56,10 @@ dotnet publish ShortDrive/ShortDrive.csproj -c Release -o publish
 
 ## Notes
 
-- Default database is EF Core **InMemory** (data resets on restart). For persistence, follow the
-  commented block in `Program.cs` to switch to SQLite.
+- Database is EF Core **SQLite** (`driveflex.db`, git-ignored) — quotes, policies and
+  admin-managed settings persist across restarts. Back up this file. The location comes from
+  `ConnectionStrings:DefaultConnection`.
+- Stripe, DVLA and SMTP credentials can be entered and **tested** in the Admin panel
+  (Stripe & DVLA tab, Email tab) — "Test connection" / "Send test email" buttons validate them live.
 - Pricing is centralized in `QuoteService.ComputePremium` (single source of truth).
 - Admin/certificate pages are `noindex` and disallowed in `robots.txt`.

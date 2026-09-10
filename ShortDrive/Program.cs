@@ -13,17 +13,12 @@ builder.Logging.AddConsole();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// For production: install Microsoft.EntityFrameworkCore.Sqlite, uncomment the else block,
-// and comment out the InMemory line. InMemory loses ALL data on restart.
-builder.Services.AddDbContext<AppDbContext>(o =>
-    o.UseInMemoryDatabase("driveflex"));
-// else
-// {
-//     var connStr = builder.Configuration.GetConnectionString("DefaultConnection")
-//         ?? "Data Source=driveflex.db";
-//     builder.Services.AddDbContext<AppDbContext>(o =>
-//         o.UseSqlite(connStr));
-// }
+// Persistent SQLite database — quotes, policies, drivers and admin-managed settings
+// (Stripe/DVSA/SMTP keys, admin password) survive application restarts.
+// The DB file location comes from ConnectionStrings:DefaultConnection (default driveflex.db).
+var connStr = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? "Data Source=driveflex.db";
+builder.Services.AddDbContext<AppDbContext>(o => o.UseSqlite(connStr));
 
 builder.Services.AddMemoryCache();
 

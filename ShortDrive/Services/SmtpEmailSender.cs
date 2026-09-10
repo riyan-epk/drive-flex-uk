@@ -133,6 +133,48 @@ public class SmtpEmailSender : IEmailSender
         }
     }
 
+    public async Task<(bool ok, string message)> SendTestEmailAsync(
+        string? host, int port, string? username, string? password,
+        string? fromEmail, string? fromName, bool useSsl, string toEmail,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(host))
+            return (false, "SMTP host is required.");
+        if (string.IsNullOrWhiteSpace(toEmail) || !toEmail.Contains('@'))
+            return (false, "Enter a valid recipient email address to test.");
+
+        var from = string.IsNullOrWhiteSpace(fromEmail) ? "noreply@drive-flex.co.uk" : fromEmail;
+        var fromDisplay = string.IsNullOrWhiteSpace(fromName) ? "Drive-Flex Insurance" : fromName;
+
+        try
+        {
+            using var client = new SmtpClient(host, port > 0 ? port : 587)
+            {
+                Credentials = string.IsNullOrWhiteSpace(username) ? null : new NetworkCredential(username, password),
+                EnableSsl = useSsl
+            };
+
+            var msg = new MailMessage
+            {
+                From = new MailAddress(from, fromDisplay),
+                Subject = "Drive-Flex SMTP test",
+                Body = "<p>This is a test email from the Drive-Flex admin panel. " +
+                       "If you received this, your SMTP settings are working correctly.</p>",
+                IsBodyHtml = true
+            };
+            msg.To.Add(toEmail);
+
+            await client.SendMailAsync(msg, ct);
+            _logger.LogInformation("SMTP test email sent to {Email} via {Host}", toEmail, host);
+            return (true, $"Success — test email sent to {toEmail} via {host}.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "SMTP test failed for host {Host}", host);
+            return (false, $"Failed: {ex.Message}");
+        }
+    }
+
     private void LogCertificate(Quote quote, string toEmail)
     {
         var driverName = $"{quote.Driver?.FirstName} {quote.Driver?.LastName}";

@@ -7,6 +7,9 @@
 @inject AppDbContext Db
 @inject IConfiguration Config
 @inject ProtectedSessionStorage SessionStore
+@inject DvsaClient Dvsa
+@inject PaymentService PaymentSvc
+@inject IEmailSender EmailSvc
 @inject NavigationManager Nav
 
 <PageTitle>Admin Panel – Drive-Flex</PageTitle>
@@ -243,6 +246,20 @@ else
                             <input class="form-check-input" type="checkbox" id="testModeSwitch" @bind="_settings.StripeTestMode" />
                             <label class="form-check-label small fw-semibold" for="testModeSwitch">Test Mode</label>
                         </div>
+                        <button type="button" class="btn btn-outline-dark rounded-pill px-3 btn-sm" @onclick="TestStripeAsync" disabled="@_stripeTesting">
+                            @if (_stripeTesting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span><span>Testing...</span>
+                            }
+                            else
+                            {
+                                <span>Test Stripe connection</span>
+                            }
+                        </button>
+                        @if (_stripeTestResult is not null)
+                        {
+                            <div class="alert @(_stripeTestOk ? "alert-success" : "alert-danger") py-2 small mt-2 mb-0">@_stripeTestResult</div>
+                        }
                         <hr class="my-4" />
                         <h5 class="fw-bold mb-3">Underwriter & FCA Details</h5>
                         <div class="mb-3">
@@ -271,9 +288,23 @@ else
                             <label class="form-label small fw-semibold">API Key (X-API-Key)</label>
                             <input type="password" class="form-control" @bind="_settings.DvsaApiKey" placeholder="DVSA API Key" />
                         </div>
-                        <div class="form-text small text-muted">
+                        <div class="form-text small text-muted mb-3">
                             These credentials are obtained from the DVSA MOT History API portal. The OAuth2 token URL and scope are configured in the server environment.
                         </div>
+                        <button type="button" class="btn btn-outline-dark rounded-pill px-3 btn-sm" @onclick="TestDvsaAsync" disabled="@_dvsaTesting">
+                            @if (_dvsaTesting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span><span>Testing...</span>
+                            }
+                            else
+                            {
+                                <span>Test DVLA connection</span>
+                            }
+                        </button>
+                        @if (_dvsaTestResult is not null)
+                        {
+                            <div class="alert @(_dvsaTestOk ? "alert-success" : "alert-danger") py-2 small mt-2 mb-0">@_dvsaTestResult</div>
+                        }
                     </div>
                 </div>
             </div>
@@ -315,6 +346,29 @@ else
                     <input class="form-check-input" type="checkbox" id="smtpSslSwitch" @bind="_settings.SmtpUseSsl" />
                     <label class="form-check-label small fw-semibold" for="smtpSslSwitch">Use SSL/TLS</label>
                 </div>
+
+                <div class="border rounded-3 p-3 mb-3 bg-light">
+                    <label class="form-label small fw-semibold">Test connection — send a test email to</label>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <input type="email" class="form-control" style="max-width: 320px;" @bind="_smtpTestTo" placeholder="you@example.com" />
+                        <button type="button" class="btn btn-outline-dark rounded-pill px-3" @onclick="TestSmtpAsync" disabled="@_smtpTesting">
+                            @if (_smtpTesting)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span><span>Sending...</span>
+                            }
+                            else
+                            {
+                                <span>Send test email</span>
+                            }
+                        </button>
+                    </div>
+                    @if (_smtpTestResult is not null)
+                    {
+                        <div class="alert @(_smtpTestOk ? "alert-success" : "alert-danger") py-2 small mt-2 mb-0">@_smtpTestResult</div>
+                    }
+                    <div class="form-text small">Tests use the values above. Saving is not required to test.</div>
+                </div>
+
                 <div class="alert alert-info py-2 small mb-0">
                     <strong>Recommended providers:</strong> SendGrid (free 100/day), Brevo, Mailgun, or Gmail App Passwords. Save and the next policy purchase will send a real email.
                 </div>
@@ -447,6 +501,12 @@ else
     private string? _pwdError;
     private bool _pwdSuccess;
 
+    // Connection-test state
+    private bool _stripeTesting; private bool _stripeTestOk; private string? _stripeTestResult;
+    private bool _dvsaTesting; private bool _dvsaTestOk; private string? _dvsaTestResult;
+    private bool _smtpTesting; private bool _smtpTestOk; private string? _smtpTestResult;
+    private string _smtpTestTo = "";
+
     protected override async Task OnInitializedAsync()
     {
         // Authenticated within this circuit (arrived from the login page): load immediately.
@@ -531,6 +591,46 @@ else
         {
             _saving = false;
         }
+    }
+
+    private async Task TestStripeAsync()
+    {
+        _stripeTesting = true; _stripeTestResult = null;
+        try
+        {
+            var (ok, msg) = await PaymentSvc.TestStripeKeyAsync(_settings?.StripeSecretKey);
+            _stripeTestOk = ok; _stripeTestResult = msg;
+        }
+        catch (Exception ex) { _stripeTestOk = false; _stripeTestResult = ex.Message; }
+        finally { _stripeTesting = false; }
+    }
+
+    private async Task TestDvsaAsync()
+    {
+        _dvsaTesting = true; _dvsaTestResult = null;
+        try
+        {
+            var (ok, msg) = await Dvsa.TestCredentialsAsync(
+                _settings?.DvsaClientId, _settings?.DvsaClientSecret, _settings?.DvsaApiKey);
+            _dvsaTestOk = ok; _dvsaTestResult = msg;
+        }
+        catch (Exception ex) { _dvsaTestOk = false; _dvsaTestResult = ex.Message; }
+        finally { _dvsaTesting = false; }
+    }
+
+    private async Task TestSmtpAsync()
+    {
+        _smtpTesting = true; _smtpTestResult = null;
+        try
+        {
+            var s = _settings!;
+            var (ok, msg) = await EmailSvc.SendTestEmailAsync(
+                s.SmtpHost, s.SmtpPort, s.SmtpUsername, s.SmtpPassword,
+                s.SmtpFromEmail, s.SmtpFromName, s.SmtpUseSsl, _smtpTestTo);
+            _smtpTestOk = ok; _smtpTestResult = msg;
+        }
+        catch (Exception ex) { _smtpTestOk = false; _smtpTestResult = ex.Message; }
+        finally { _smtpTesting = false; }
     }
 
     private async Task ChangePasswordAsync()
