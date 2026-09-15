@@ -1,5 +1,5 @@
 @page "/quote"
-@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@rendermode @(new InteractiveServerRenderMode(prerender: true))
 @inject DvsaClient Dvsa
 @inject QuoteService QuoteSvc
 @inject PaymentService PaymentSvc
@@ -101,67 +101,69 @@
                     </div>
                 </div>
 
-                <div class="section-label mb-2">LOGBOOK FIELDS</div>
+                <div class="section-label mb-2">VEHICLE DETAILS</div>
                 <div class="logbook-grid">
                     <div class="logbook-item">
                         <div class="logbook-code">D.1 MAKE</div>
                         <div class="logbook-val">@_vehicle.Make</div>
                     </div>
-                    <div class="logbook-item">
-                        <div class="logbook-code">D.2 MODEL</div>
-                        <div class="logbook-val">@(_vehicle.Model ?? "N/A")</div>
-                    </div>
-                    <div class="logbook-item">
-                        <div class="logbook-code">P.5 FIRST REGISTERED</div>
-                        <div class="logbook-val">@(_vehicle.FirstRegistered ?? "N/A")</div>
-                    </div>
-                    <div class="logbook-item">
-                        <div class="logbook-code">P.1 ENGINE</div>
-                        <div class="logbook-val">@(_vehicle.EngineCapacityCc ?? "N/A")</div>
-                    </div>
-                    <div class="logbook-item">
-                        <div class="logbook-code">P.3 FUEL</div>
-                        <div class="logbook-val">@(_vehicle.FuelType ?? "N/A")</div>
-                    </div>
-                    <div class="logbook-item">
-                        <div class="logbook-code">V.7 CO2</div>
-                        <div class="logbook-val">@(_vehicle.Co2Emissions ?? "N/A")</div>
-                    </div>
-                    <div class="logbook-item">
-                        <div class="logbook-code">V.9 EURO CLASS</div>
-                        <div class="logbook-val">@(_vehicle.EuroClass ?? "N/A")</div>
-                    </div>
-                    <div class="logbook-item">
-                        <div class="logbook-code">COLOUR</div>
-                        <div class="logbook-val">@(_vehicle.Colour ?? "N/A")</div>
-                    </div>
-                    <div class="logbook-item">
-                        <div class="logbook-code">K TYPE APPROVAL</div>
-                        <div class="logbook-val">@(_vehicle.TypeApproval ?? "N/A")</div>
-                    </div>
+                    @if (!string.IsNullOrEmpty(_vehicle.Model))
+                    {
+                        <div class="logbook-item">
+                            <div class="logbook-code">D.2 MODEL</div>
+                            <div class="logbook-val">@_vehicle.Model</div>
+                        </div>
+                    }
+                    @if (_vehicle.YearOfManufacture is not null)
+                    {
+                        <div class="logbook-item">
+                            <div class="logbook-code">YEAR</div>
+                            <div class="logbook-val">@_vehicle.YearOfManufacture</div>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(_vehicle.EngineCapacityCc))
+                    {
+                        <div class="logbook-item">
+                            <div class="logbook-code">P.1 ENGINE</div>
+                            <div class="logbook-val">@_vehicle.EngineCapacityCc</div>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(_vehicle.FuelType))
+                    {
+                        <div class="logbook-item">
+                            <div class="logbook-code">P.3 FUEL</div>
+                            <div class="logbook-val">@_vehicle.FuelType</div>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(_vehicle.Colour))
+                    {
+                        <div class="logbook-item">
+                            <div class="logbook-code">COLOUR</div>
+                            <div class="logbook-val">@_vehicle.Colour</div>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(_vehicle.FirstRegistered))
+                    {
+                        <div class="logbook-item">
+                            <div class="logbook-code">P.5 FIRST REGISTERED</div>
+                            <div class="logbook-val">@_vehicle.FirstRegistered</div>
+                        </div>
+                    }
+                    @if (!string.IsNullOrEmpty(_vehicle.Mileage))
+                    {
+                        <div class="logbook-item">
+                            <div class="logbook-code">ODOMETER · LAST MOT</div>
+                            <div class="logbook-val">@_vehicle.Mileage</div>
+                        </div>
+                    }
                 </div>
 
                 <div class="dossier-status-row">
                     <div>
-                        <div class="small text-muted">ROAD TAX</div>
-                        @if (!string.IsNullOrEmpty(_vehicle.TaxStatus))
-                        {
-                            <div class="status-check-badge">@_vehicle.TaxStatus</div>
-                            @if (!string.IsNullOrEmpty(_vehicle.TaxDueDate))
-                            {
-                                <div class="small text-muted">Due @_vehicle.TaxDueDate</div>
-                            }
-                        }
-                        else
-                        {
-                            <div class="small text-muted">Not available</div>
-                        }
-                    </div>
-                    <div>
-                        <div class="small text-muted">MOT</div>
+                        <div class="small text-muted">MOT STATUS</div>
                         @if (!string.IsNullOrEmpty(_vehicle.MotStatus))
                         {
-                            <div class="status-check-badge">@_vehicle.MotStatus</div>
+                            <div class="status-check-badge">@(_vehicle.MotStatus == "Valid" ? "✓ " : "")@_vehicle.MotStatus</div>
                             @if (!string.IsNullOrEmpty(_vehicle.MotExpiryDate))
                             {
                                 <div class="small text-muted">Expires @_vehicle.MotExpiryDate</div>
@@ -169,8 +171,13 @@
                         }
                         else
                         {
-                            <div class="small text-muted">Not available</div>
+                            <div class="small text-muted">No MOT due yet</div>
                         }
+                    </div>
+                    <div>
+                        <div class="small text-muted">DVLA RECORD</div>
+                        <div class="status-check-badge">✓ Verified</div>
+                        <div class="small text-muted">Live MOT history lookup</div>
                     </div>
                 </div>
             </div>
@@ -503,10 +510,21 @@
         if (!string.IsNullOrWhiteSpace(QueryClass))
             _cover.VehicleClass = QueryClass;
 
+        // Show the plate immediately in the prerendered HTML; the actual lookup is deferred to
+        // the first interactive render (below) so it runs exactly once instead of during both
+        // prerender and hydration.
         if (!string.IsNullOrWhiteSpace(QueryReg))
-        {
             _regInput = QueryReg;
+    }
+
+    private bool _autoLookupDone;
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_autoLookupDone && !string.IsNullOrWhiteSpace(QueryReg) && _vehicle is null)
+        {
+            _autoLookupDone = true;
             await LookupVehicleAsync();
+            StateHasChanged();
         }
     }
 

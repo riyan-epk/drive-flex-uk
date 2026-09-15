@@ -46,6 +46,25 @@ public class VehicleDto
     public string? TaxDueDate { get; set; }
     public string? MotStatus { get; set; }
     public string? MotExpiryDate { get; set; }
+
+    // Latest odometer reading from MOT history (display only; not persisted).
+    public string? Mileage { get; set; }
+
+    // Raw fields returned by the DVSA MOT History API — used to populate the display fields above.
+    [JsonPropertyName("engineSize")] public string? EngineSize { get; set; }
+    [JsonPropertyName("registrationDate")] public string? RegistrationDate { get; set; }
+    [JsonPropertyName("firstUsedDate")] public string? FirstUsedDate { get; set; }
+    [JsonPropertyName("manufactureDate")] public string? ManufactureDate { get; set; }
+    [JsonPropertyName("motTests")] public List<MotTestDto>? MotTests { get; set; }
+}
+
+public class MotTestDto
+{
+    [JsonPropertyName("completedDate")] public string? CompletedDate { get; set; }
+    [JsonPropertyName("expiryDate")] public string? ExpiryDate { get; set; }
+    [JsonPropertyName("testResult")] public string? TestResult { get; set; }
+    [JsonPropertyName("odometerValue")] public string? OdometerValue { get; set; }
+    [JsonPropertyName("odometerUnit")] public string? OdometerUnit { get; set; }
 }
 
 public class DvsaClient
@@ -162,7 +181,8 @@ public class DvsaClient
                 TaxStatus = "Taxed",
                 TaxDueDate = "2026-12-01",
                 MotStatus = "Valid",
-                MotExpiryDate = "2027-06-11"
+                MotExpiryDate = "11 Jun 2027",
+                Mileage = "24,150 miles"
             };
         }
 
@@ -206,6 +226,8 @@ public class DvsaClient
 
             if (dto is not null)
             {
+                EnrichFromMotHistory(dto);
+
                 if (clean.Length == 7 && !clean.Contains(' '))
                     dto.Registration = $"{clean[..4]} {clean[4..]}";
                 else
@@ -219,6 +241,56 @@ public class DvsaClient
             throw;
         }
     }
+
+    /// <summary>
+    /// Fills the display fields (engine, first-registered, year, MOT status/expiry, mileage) from
+    /// the raw values the MOT History API returns. Fields that this API does not provide
+    /// (CO2, Euro class, type approval, road tax) are left null and are not shown in the UI.
+    /// </summary>
+    private static void EnrichFromMotHistory(VehicleDto dto)
+    {
+        if (string.IsNullOrEmpty(dto.EngineCapacityCc) && !string.IsNullOrWhiteSpace(dto.EngineSize))
+            dto.EngineCapacityCc = $"{dto.EngineSize} cc";
+
+        if (string.IsNullOrEmpty(dto.FirstRegistered))
+            dto.FirstRegistered = FormatDate(dto.RegistrationDate ?? dto.FirstUsedDate);
+
+        if (dto.YearOfManufacture is null)
+        {
+            var basis = dto.ManufactureDate ?? dto.RegistrationDate ?? dto.FirstUsedDate;
+            if (DateTime.TryParse(basis, out var md)) dto.YearOfManufacture = md.Year;
+        }
+
+        var latest = dto.MotTests?
+            .Where(t => t is not null)
+            .OrderByDescending(t => DateTime.TryParse(t!.CompletedDate, out var c) ? c : DateTime.MinValue)
+            .FirstOrDefault();
+
+        if (latest is not null)
+        {
+            if (!string.IsNullOrWhiteSpace(latest.OdometerValue))
+            {
+                var unit = string.Equals(latest.OdometerUnit, "KM", StringComparison.OrdinalIgnoreCase) ? "km" : "miles";
+                dto.Mileage = long.TryParse(latest.OdometerValue, out var reading)
+                    ? $"{reading:N0} {unit}"
+                    : $"{latest.OdometerValue} {unit}";
+            }
+
+            var passed = string.Equals(latest.TestResult, "PASSED", StringComparison.OrdinalIgnoreCase);
+            if (passed && DateTime.TryParse(latest.ExpiryDate, out var expiry))
+            {
+                dto.MotStatus = expiry.Date >= DateTime.UtcNow.Date ? "Valid" : "Expired";
+                dto.MotExpiryDate = FormatDate(latest.ExpiryDate);
+            }
+            else if (string.Equals(latest.TestResult, "FAILED", StringComparison.OrdinalIgnoreCase))
+            {
+                dto.MotStatus = "Not valid";
+            }
+        }
+    }
+
+    private static string? FormatDate(string? raw)
+        => DateTime.TryParse(raw, out var d) ? d.ToString("dd MMM yyyy") : raw;
 
     /// <summary>
     /// Validates DVSA credentials: requests an OAuth token (proves Client ID/Secret) then calls

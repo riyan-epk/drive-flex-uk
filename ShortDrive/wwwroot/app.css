@@ -36,6 +36,57 @@
     box-sizing: border-box;
 }
 
+/* ---- Focus handling ----
+   Blazor's <FocusOnNavigate> moves focus to the page <h1> on every navigation, which the browser
+   draws as a black outline around the hero heading. Suppress the ring on non-interactive/auto-
+   focused elements, but KEEP a clean focus ring for keyboard users on real controls. */
+html {
+    scroll-behavior: smooth;
+}
+
+:focus:not(:focus-visible) {
+    outline: none;
+}
+
+h1:focus, h2:focus, [tabindex="-1"]:focus {
+    outline: none !important;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role="button"]:focus-visible {
+    outline: 2px solid var(--df-primary);
+    outline-offset: 2px;
+    border-radius: 6px;
+}
+
+/* ---- Entrance transitions (smooth, professional) ---- */
+@keyframes df-fade-in-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: none; }
+}
+
+main {
+    animation: df-fade-in-up 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.vehicle-dossier-card {
+    animation: df-fade-in-up 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+    }
+}
+
 body {
     background-color: var(--df-bg);
     color: var(--df-text);
