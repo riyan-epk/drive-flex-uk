@@ -86,12 +86,20 @@
             }
         }
 
-        // After every enhanced page navigation, scroll to the top so a new page always opens at
-        // its first section, and make sure the mobile menu is closed.
+        // Sticky header gets a subtle solid/blur state once the page scrolls.
+        function dfSyncHeader() {
+            var nav = document.querySelector('.df-navbar');
+            if (nav) nav.classList.toggle('scrolled', window.scrollY > 8);
+        }
+        window.addEventListener('scroll', dfSyncHeader, { passive: true });
+
+        // After every enhanced page navigation: scroll to top, close the mobile menu,
+        // and re-sync the header state.
         (function () {
             function onNav() {
                 window.scrollTo({ top: 0, left: 0 });
                 dfCloseMenu();
+                dfSyncHeader();
             }
             function hook() {
                 if (window.Blazor && Blazor.addEventListener) {
@@ -99,6 +107,9 @@
                     return true;
                 }
                 return false;
+            }
+            if (document.readyState !== 'loading') { dfSyncHeader(); } else {
+                document.addEventListener('DOMContentLoaded', dfSyncHeader);
             }
             if (!hook()) {
                 document.addEventListener('DOMContentLoaded', hook);
