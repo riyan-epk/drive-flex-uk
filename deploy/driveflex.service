@@ -1,0 +1,25 @@
+# Drive-Flex — systemd unit. Installed to /etc/systemd/system/driveflex.service
+# Runs the published app with Kestrel listening only on localhost:5000 (Nginx is the public door).
+[Unit]
+Description=Drive-Flex Blazor Server app
+After=network.target
+
+[Service]
+WorkingDirectory=/var/www/driveflex
+# NOTE: if `which dotnet` is not /usr/bin/dotnet, update the path below.
+ExecStart=/usr/bin/dotnet /var/www/driveflex/ShortDrive.dll
+Restart=always
+RestartSec=10
+KillSignal=SIGINT
+SyslogIdentifier=driveflex
+User=driveflex
+
+Environment=ASPNETCORE_ENVIRONMENT=Production
+Environment=ASPNETCORE_URLS=http://127.0.0.1:5000
+# Critical behind Nginx: makes the app trust X-Forwarded-Proto so HTTPS redirect doesn't loop.
+Environment=ASPNETCORE_FORWARDEDHEADERS_ENABLED=true
+Environment=DOTNET_NOLOGO=true
+Environment=DOTNET_CLI_TELEMETRY_OPTOUT=1
+
+[Install]
+WantedBy=multi-user.target
