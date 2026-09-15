@@ -82,6 +82,92 @@ main {
     animation: df-fade-in-up 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* ---- Contact page (premium cards with hover + entrance animation) ---- */
+.df-contact-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    margin-top: 1.75rem;
+}
+.df-contact-card {
+    display: block;
+    text-decoration: none;
+    background: var(--df-bg-card);
+    border: 1px solid var(--df-border);
+    border-radius: var(--df-radius-lg);
+    padding: 1.85rem;
+    transition: transform var(--df-transition), box-shadow var(--df-transition), border-color var(--df-transition);
+    animation: df-fade-in-up 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.df-contact-card:nth-child(2) { animation-delay: 0.08s; }
+.df-contact-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--df-shadow-hover);
+    border-color: var(--df-primary);
+}
+.df-contact-card-primary {
+    background: linear-gradient(135deg, #1D4ED8 0%, #1E40AF 100%);
+    border-color: transparent;
+    box-shadow: 0 8px 28px rgba(29, 78, 216, 0.28);
+}
+.df-contact-card-primary:hover {
+    box-shadow: 0 16px 44px rgba(29, 78, 216, 0.4);
+    border-color: transparent;
+}
+.df-contact-icon {
+    width: 54px;
+    height: 54px;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.55rem;
+    margin-bottom: 1.1rem;
+    background: var(--df-primary-light);
+    color: var(--df-primary);
+    transition: transform var(--df-transition);
+}
+.df-contact-card:hover .df-contact-icon { transform: scale(1.08) rotate(-4deg); }
+.df-contact-card-primary .df-contact-icon { background: rgba(255, 255, 255, 0.18); color: #fff; }
+.df-contact-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--df-text-muted);
+    margin-bottom: 0.4rem;
+}
+.df-contact-value {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--df-text);
+    word-break: break-word;
+}
+.df-contact-sub {
+    font-size: 0.86rem;
+    color: var(--df-text-secondary);
+    margin-top: 0.6rem;
+}
+.df-contact-card-primary .df-contact-label,
+.df-contact-card-primary .df-contact-value,
+.df-contact-card-primary .df-contact-sub { color: #ffffff; }
+.df-contact-card-primary .df-contact-label { color: rgba(255, 255, 255, 0.85); }
+.df-contact-card-primary .df-contact-sub { color: rgba(255, 255, 255, 0.9); }
+.df-contact-note {
+    margin-top: 1.5rem;
+    padding: 1.15rem 1.4rem;
+    background: var(--df-bg-subtle);
+    border: 1px solid var(--df-border);
+    border-radius: var(--df-radius-md);
+    font-size: 0.92rem;
+    color: var(--df-text-secondary);
+}
+.df-contact-note a { color: var(--df-primary); font-weight: 600; text-decoration: none; }
+.df-contact-note a:hover { text-decoration: underline; }
+@media (max-width: 640px) {
+    .df-contact-grid { grid-template-columns: 1fr; }
+}
+
 /* ---- Editable content pages (About / Privacy / Terms / Contact) ---- */
 .df-page-content {
     color: var(--df-text-secondary);
@@ -416,6 +502,9 @@ body {
 
 .df-tab-btn:hover:not(.active) {
     color: var(--df-text);
+    background: rgba(255, 255, 255, 0.75);
+    box-shadow: var(--df-shadow-sm);
+    transform: translateY(-1px);
 }
 
 .df-tab-btn.active {

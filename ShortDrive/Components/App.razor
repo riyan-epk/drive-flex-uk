@@ -24,6 +24,22 @@
 <body>
     <Routes />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script>
+        // After every enhanced page navigation, scroll to the top so a new page always opens at
+        // its first section (not wherever the previous page was scrolled to).
+        (function () {
+            function toTop() { window.scrollTo({ top: 0, left: 0 }); }
+            if (window.Blazor && Blazor.addEventListener) {
+                Blazor.addEventListener('enhancedload', toTop);
+            } else {
+                document.addEventListener('DOMContentLoaded', function () {
+                    if (window.Blazor && Blazor.addEventListener) {
+                        Blazor.addEventListener('enhancedload', toTop);
+                    }
+                });
+            }
+        })();
+    </script>
 </body>
 
 </html>
