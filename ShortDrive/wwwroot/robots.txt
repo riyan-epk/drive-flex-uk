@@ -4,4 +4,4 @@ Disallow: /admin
 Disallow: /admin/login
 Disallow: /quote/success
 
-Sitemap: https://yourdomain.com/sitemap.xml
+Sitemap: https://drive-flex.uk/sitemap.xml
