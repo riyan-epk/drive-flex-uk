@@ -1,5 +1,5 @@
 @page "/admin/login"
-@rendermode @(new InteractiveServerRenderMode(prerender: false))
+@rendermode @(new InteractiveServerRenderMode(prerender: true))
 @using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
 @inject AdminAuthService AdminAuth
 @inject ProtectedSessionStorage SessionStore
