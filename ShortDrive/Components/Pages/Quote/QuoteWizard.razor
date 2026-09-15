@@ -7,6 +7,7 @@
 @inject NavigationManager Nav
 @inject VehicleLookupRateLimiter RateLimiter
 @inject IHttpContextAccessor HttpCtx
+@inject IJSRuntime JS
 
 <PageTitle>Get Covered – Drive-Flex</PageTitle>
 
@@ -34,6 +35,7 @@
         </div>
     }
 
+    <div class="wizard-step" @key="_step">
     @if (_step == 1)
     {
         <h1 class="wizard-title">What's your registration?</h1>
@@ -413,6 +415,7 @@
             <div class="addon-price">+£@(_pricingSettings?.ComprehensiveUpgradePrice.ToString("0.00") ?? "2.95")</div>
         </div>
     }
+    </div>
 
     @if (!string.IsNullOrEmpty(_paymentError))
     {
@@ -603,7 +606,7 @@
             _cover.StartDateLocal = dt;
     }
 
-    private void NextStep()
+    private async Task NextStep()
     {
         if (_step == 1 && _vehicle is null) return;
         if (_step == 4)
@@ -612,17 +615,40 @@
             if (error is not null)
             {
                 _paymentError = error;
+                await ScrollToTopAsync();
                 return;
             }
             _paymentError = null;
         }
-        if (_step < 5) _step++;
+        if (_step < 5)
+        {
+            _step++;
+            await ScrollToTopAsync();
+        }
     }
 
-    private void GoBack()
+    private async Task GoBack()
     {
         _paymentError = null;
-        if (_step > 1) _step--;
+        if (_step > 1)
+        {
+            _step--;
+            await ScrollToTopAsync();
+        }
+    }
+
+    // Return the viewport to the top when the step changes, so the user always lands on the new
+    // step's heading instead of staying scrolled at the bottom bar.
+    private async Task ScrollToTopAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("scrollTo", new { top = 0, behavior = "smooth" });
+        }
+        catch
+        {
+            // JS interop unavailable (e.g. during prerender) — safe to ignore.
+        }
     }
 
     // Simple email shape check (defence in depth; the input is type=email client-side).

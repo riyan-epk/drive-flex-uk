@@ -12,9 +12,9 @@
                 <nav class="d-none d-md-flex align-items-center gap-1">
                     <NavLink class="df-nav-link" href="/" Match="NavLinkMatch.All">Home</NavLink>
                     <NavLink class="df-nav-link" href="/quote">Get Covered</NavLink>
-                    <a class="df-nav-link" href="#about">About</a>
-                    <a class="df-nav-link" href="#claims">Claims</a>
-                    <a class="df-nav-link" href="#contact">Contact</a>
+                    <a class="df-nav-link" href="/#about">About</a>
+                    <NavLink class="df-nav-link" href="/claims">Claims</NavLink>
+                    <NavLink class="df-nav-link" href="/contact">Contact</NavLink>
                 </nav>
 
                 <div class="d-flex align-items-center gap-2">
@@ -33,9 +33,9 @@
                 <nav class="df-mobile-nav d-md-none">
                     <NavLink class="df-mobile-link" href="/" Match="NavLinkMatch.All" @onclick="CloseMobileMenu">Home</NavLink>
                     <NavLink class="df-mobile-link" href="/quote" @onclick="CloseMobileMenu">Get Covered</NavLink>
-                    <a class="df-mobile-link" href="#about" @onclick="CloseMobileMenu">About</a>
-                    <a class="df-mobile-link" href="#claims" @onclick="CloseMobileMenu">Claims</a>
-                    <a class="df-mobile-link" href="#contact" @onclick="CloseMobileMenu">Contact</a>
+                    <a class="df-mobile-link" href="/#about" @onclick="CloseMobileMenu">About</a>
+                    <NavLink class="df-mobile-link" href="/claims" @onclick="CloseMobileMenu">Claims</NavLink>
+                    <NavLink class="df-mobile-link" href="/contact" @onclick="CloseMobileMenu">Contact</NavLink>
                 </nav>
             }
         </div>
@@ -71,10 +71,9 @@
                 <div class="col-6 col-lg-2">
                     <div class="section-label">Company</div>
                     <ul class="df-footer-links">
-                        <li><a href="#about">About Us</a></li>
-                        <li><a href="#claims">Make a Claim</a></li>
-                        <li><a href="#careers">Careers</a></li>
-                        <li><a href="#contact">Contact Us</a></li>
+                        <li><a href="/#about">About Us</a></li>
+                        <li><a href="/claims">Make a Claim</a></li>
+                        <li><a href="/contact">Contact Us</a></li>
                     </ul>
                 </div>
                 <div class="col-6 col-lg-2">
