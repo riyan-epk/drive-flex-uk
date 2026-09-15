@@ -5,7 +5,7 @@
 @inject QuoteService QuoteSvc
 @inject NavigationManager Nav
 
-<PageTitle>@((_page?.Title ?? "Drive-Flex") + " – Drive-Flex")</PageTitle>
+<SeoHead Title="@SeoTitle" Description="@SeoDescription" Path="@("/" + _slug)" />
 
 <div class="container py-5" style="max-width: 820px; min-height: 70vh;">
     @if (_page is null)
@@ -62,11 +62,36 @@
 
 @code {
     private SitePage? _page;
+    private string _slug = "about";
+
+    // Hand-written SEO title + meta description per page (keyword-led, ~55–160 chars).
+    private static readonly Dictionary<string, (string Title, string Description)> SeoMeta = new()
+    {
+        ["about"] = (
+            "About Drive-Flex – FCA-Authorised Short-Term Motor Cover",
+            "Drive-Flex provides flexible, FCA-authorised temporary motor insurance across the UK, underwritten by ERS. Learn how we deliver fully comprehensive cover in under a minute."),
+        ["contact"] = (
+            "Contact Drive-Flex – UK Temporary Insurance Support",
+            "Get in touch with the Drive-Flex support team about quotes, cover or certificates. We reply within one business day, Monday to Friday, 9am–6pm UK time."),
+        ["privacy"] = (
+            "Privacy Policy | Drive-Flex Temporary Motor Insurance",
+            "How Drive-Flex collects, uses and protects your personal data in line with UK GDPR. Read our privacy policy for temporary motor insurance customers."),
+        ["terms"] = (
+            "Terms of Business | Drive-Flex Temporary Motor Insurance",
+            "The terms of business for Drive-Flex temporary motor insurance — the conditions that apply to your short-term cover, quotes and certificates."),
+    };
+
+    private string SeoTitle =>
+        SeoMeta.TryGetValue(_slug, out var m) ? m.Title : $"{_page?.Title ?? "Drive-Flex"} – Drive-Flex";
+
+    private string SeoDescription =>
+        SeoMeta.TryGetValue(_slug, out var m) ? m.Description
+            : "Flexible short-term UK motor insurance for cars, vans, bikes and campers, underwritten by ERS.";
 
     protected override async Task OnInitializedAsync()
     {
-        var slug = new Uri(Nav.Uri).AbsolutePath.Trim('/').ToLowerInvariant();
-        if (string.IsNullOrEmpty(slug)) slug = "about";
-        _page = await QuoteSvc.GetPageAsync(slug);
+        _slug = new Uri(Nav.Uri).AbsolutePath.Trim('/').ToLowerInvariant();
+        if (string.IsNullOrEmpty(_slug)) _slug = "about";
+        _page = await QuoteSvc.GetPageAsync(_slug);
     }
 }

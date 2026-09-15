@@ -4,11 +4,50 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Drive-Flex — flexible short-term UK motor insurance for cars, vans, bikes and campers. Fully comprehensive cover from 1 hour to 28 days, underwritten by ERS, with your certificate emailed in minutes." />
     <meta name="theme-color" content="#1D4ED8" />
-    <meta property="og:title" content="Drive-Flex — Temporary Motor Insurance UK" />
-    <meta property="og:description" content="Instant comprehensive short-term car, van, bike and camper insurance from 1 hour to 28 days." />
-    <meta property="og:type" content="website" />
+    <meta name="author" content="Drive-Flex" />
+
+    @* Site-wide social defaults. Per-page title / description / canonical / og:url are supplied
+       by the <SeoHead> component on each page. *@
+    <meta property="og:site_name" content="Drive-Flex" />
+    <meta property="og:locale" content="en_GB" />
+    <meta property="og:image" content="https://drive-flex.uk/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Drive-Flex — flexible temporary motor insurance from 1 hour to 28 days" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://drive-flex.uk/og-image.png" />
+
+    @* Structured data — helps Google understand the business and can enable richer listings. *@
+    <script type="application/ld+json">
+    {
+      "@@context": "https://schema.org",
+      "@@type": "InsuranceAgency",
+      "name": "Drive-Flex",
+      "url": "https://drive-flex.uk",
+      "image": "https://drive-flex.uk/favicon.png",
+      "logo": "https://drive-flex.uk/favicon.png",
+      "email": "supportdriveflex@@gmail.com",
+      "description": "Flexible short-term UK motor insurance for cars, vans, bikes and campers — fully comprehensive cover from 1 hour to 28 days, underwritten by ERS.",
+      "areaServed": { "@@type": "Country", "name": "United Kingdom" },
+      "knowsAbout": ["Temporary car insurance", "Short-term van insurance", "Learner driver insurance", "Temporary motorbike insurance", "Campervan insurance"],
+      "priceRange": "From £8",
+      "openingHoursSpecification": {
+        "@@type": "OpeningHoursSpecification",
+        "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        "opens": "09:00",
+        "closes": "18:00"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@@context": "https://schema.org",
+      "@@type": "WebSite",
+      "name": "Drive-Flex",
+      "url": "https://drive-flex.uk"
+    }
+    </script>
     <base href="/" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -25,18 +64,44 @@
     <Routes />
     <script src="@Assets["_framework/blazor.web.js"]"></script>
     <script>
+        // Mobile navigation toggle. The site header lives in a server-rendered (non-interactive)
+        // layout, so the hamburger is driven by plain JS rather than a Blazor click handler.
+        function dfToggleMenu() {
+            var nav = document.getElementById('dfMobileNav');
+            var btn = document.getElementById('dfMobileToggle');
+            if (!nav) return;
+            var isOpen = nav.classList.toggle('open');
+            if (btn) {
+                btn.classList.toggle('open', isOpen);
+                btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            }
+        }
+        function dfCloseMenu() {
+            var nav = document.getElementById('dfMobileNav');
+            var btn = document.getElementById('dfMobileToggle');
+            if (nav) nav.classList.remove('open');
+            if (btn) {
+                btn.classList.remove('open');
+                btn.setAttribute('aria-expanded', 'false');
+            }
+        }
+
         // After every enhanced page navigation, scroll to the top so a new page always opens at
-        // its first section (not wherever the previous page was scrolled to).
+        // its first section, and make sure the mobile menu is closed.
         (function () {
-            function toTop() { window.scrollTo({ top: 0, left: 0 }); }
-            if (window.Blazor && Blazor.addEventListener) {
-                Blazor.addEventListener('enhancedload', toTop);
-            } else {
-                document.addEventListener('DOMContentLoaded', function () {
-                    if (window.Blazor && Blazor.addEventListener) {
-                        Blazor.addEventListener('enhancedload', toTop);
-                    }
-                });
+            function onNav() {
+                window.scrollTo({ top: 0, left: 0 });
+                dfCloseMenu();
+            }
+            function hook() {
+                if (window.Blazor && Blazor.addEventListener) {
+                    Blazor.addEventListener('enhancedload', onNav);
+                    return true;
+                }
+                return false;
+            }
+            if (!hook()) {
+                document.addEventListener('DOMContentLoaded', hook);
             }
         })();
     </script>

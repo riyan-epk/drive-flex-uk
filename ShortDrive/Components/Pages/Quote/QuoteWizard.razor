@@ -9,7 +9,9 @@
 @inject IHttpContextAccessor HttpCtx
 @inject IJSRuntime JS
 
-<PageTitle>Get Covered – Drive-Flex</PageTitle>
+<SeoHead Title="Get an Instant Temporary Insurance Quote | Drive-Flex"
+         Description="Enter your registration for an instant temporary motor insurance quote. Comprehensive cover for cars, vans, bikes and campers from 1 hour to 28 days. No auto-renewal — pay only for what you need."
+         Path="/quote" />
 
 <div class="container py-4" style="max-width: 920px; min-height: 80vh;">
     <div class="wizard-header-strip">
@@ -255,30 +257,33 @@
         <h1 class="wizard-title">Driver & Duration</h1>
         <p class="wizard-sub">Tell us who is driving and how long you need cover.</p>
 
-        <div class="p-4 rounded-4 mb-4" style="background: #ffffff; border: 1px solid var(--df-border);">
-            <div class="section-label mb-2">COVER DURATION</div>
-            <div class="d-flex flex-wrap gap-2 mb-3">
-                @foreach (var opt in new[] { (1, "1 Hour"), (24, "1 Day"), (72, "3 Days"), (168, "7 Days"), (336, "14 Days"), (672, "28 Days") })
+        <div class="df-duration-panel mb-4">
+            <div class="section-label mb-1">COVER DURATION</div>
+            <p class="small text-muted mb-0">Tap how long you need cover for.</p>
+            <div class="df-duration-grid">
+                @foreach (var opt in new[] { (1, "1", "Hour"), (24, "1", "Day"), (72, "3", "Days"), (168, "7", "Days"), (336, "14", "Days"), (672, "28", "Days") })
                 {
-                    <button type="button" class="df-tab-btn @(_cover.DurationHours == opt.Item1 ? "active" : "")"
-                            style="padding: 0.5rem 1.2rem;" @onclick="() => _cover.DurationHours = opt.Item1">@opt.Item2</button>
+                    <button type="button" class="df-duration-btn @(_cover.DurationHours == opt.Item1 ? "active" : "")"
+                            aria-pressed="@(_cover.DurationHours == opt.Item1)"
+                            @onclick="() => _cover.DurationHours = opt.Item1">
+                        <span class="dur-num">@opt.Item2</span>
+                        <span class="dur-unit">@opt.Item3</span>
+                    </button>
                 }
             </div>
 
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label small fw-semibold text-muted">Cover start time</label>
-                    <input type="datetime-local" class="form-control"
-                           value="@_cover.StartDateLocal.ToString("yyyy-MM-ddTHH:mm")"
-                           min="@UkTime.Now.ToString("yyyy-MM-ddTHH:mm")"
-                           @onchange="OnStartDateChanged" />
-                    <div class="form-text small">Times are UK time.</div>
-                </div>
-                <div class="col-md-6 d-flex align-items-end">
-                    <div class="small text-muted">
-                        Selected: <strong>@_cover.DurationLabel</strong> starting @_cover.StartDateLocal.ToString("dd MMM yyyy, HH:mm")
-                    </div>
-                </div>
+            <div class="df-duration-summary">
+                <span>&#128197;</span>
+                <span>Selected <strong>@_cover.DurationLabel</strong> starting @_cover.StartDateLocal.ToString("dd MMM yyyy, HH:mm")</span>
+            </div>
+
+            <div class="mt-3" style="max-width: 320px;">
+                <label class="form-label small fw-semibold text-muted">Cover start time</label>
+                <input type="datetime-local" class="form-control"
+                       value="@_cover.StartDateLocal.ToString("yyyy-MM-ddTHH:mm")"
+                       min="@UkTime.Now.ToString("yyyy-MM-ddTHH:mm")"
+                       @onchange="OnStartDateChanged" />
+                <div class="form-text small">Times are UK time.</div>
             </div>
         </div>
 

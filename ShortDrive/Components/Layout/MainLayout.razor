@@ -22,22 +22,23 @@
                         <span>Get a Quote</span>
                         <span>&rarr;</span>
                     </a>
-                    <button class="df-mobile-toggle d-md-none" @onclick="ToggleMobileMenu" aria-label="Toggle menu">
+                    <button type="button" id="dfMobileToggle" class="df-mobile-toggle d-md-none"
+                            onclick="dfToggleMenu()" aria-label="Toggle menu"
+                            aria-expanded="false" aria-controls="dfMobileNav">
                         <span></span><span></span><span></span>
                     </button>
                 </div>
             </div>
 
-            @if (_mobileMenuOpen)
-            {
-                <nav class="df-mobile-nav d-md-none">
-                    <NavLink class="df-mobile-link" href="/" Match="NavLinkMatch.All" @onclick="CloseMobileMenu">Home</NavLink>
-                    <NavLink class="df-mobile-link" href="/quote" @onclick="CloseMobileMenu">Get Covered</NavLink>
-                    <NavLink class="df-mobile-link" href="/about" @onclick="CloseMobileMenu">About</NavLink>
-                    <NavLink class="df-mobile-link" href="/claims" @onclick="CloseMobileMenu">Claims</NavLink>
-                    <NavLink class="df-mobile-link" href="/contact" @onclick="CloseMobileMenu">Contact</NavLink>
-                </nav>
-            }
+            @* Rendered statically and toggled with plain JS: the layout is server-rendered
+               (non-interactive), so a Blazor @@onclick handler here would never fire. *@
+            <nav id="dfMobileNav" class="df-mobile-nav d-md-none">
+                <NavLink class="df-mobile-link" href="/" Match="NavLinkMatch.All" onclick="dfCloseMenu()">Home</NavLink>
+                <NavLink class="df-mobile-link" href="/quote" onclick="dfCloseMenu()">Get Covered</NavLink>
+                <NavLink class="df-mobile-link" href="/about" onclick="dfCloseMenu()">About</NavLink>
+                <NavLink class="df-mobile-link" href="/claims" onclick="dfCloseMenu()">Claims</NavLink>
+                <NavLink class="df-mobile-link" href="/contact" onclick="dfCloseMenu()">Contact</NavLink>
+            </nav>
         </div>
     </header>
 
@@ -105,8 +106,3 @@
     </footer>
 </div>
 
-@code {
-    private bool _mobileMenuOpen;
-    private void ToggleMobileMenu() => _mobileMenuOpen = !_mobileMenuOpen;
-    private void CloseMobileMenu() => _mobileMenuOpen = false;
-}

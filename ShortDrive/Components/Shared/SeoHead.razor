@@ -1,0 +1,56 @@
+@* Reusable SEO head block. Renders a unique <title>, meta description, canonical URL and
+   Open Graph / Twitter tags for a page. Drop <SeoHead Title="..." Description="..." Path="/..." />
+   near the top of any routable page. Set NoIndex="true" to keep a page out of search results. *@
+
+<PageTitle>@Title</PageTitle>
+
+<HeadContent>
+    <meta name="description" content="@Description" />
+    <link rel="canonical" href="@CanonicalUrl" />
+
+    @if (NoIndex)
+    {
+        <meta name="robots" content="noindex, nofollow" />
+    }
+    else
+    {
+        <meta name="robots" content="index, follow, max-image-preview:large" />
+    }
+
+    @* Open Graph (Facebook, LinkedIn, WhatsApp) *@
+    <meta property="og:title" content="@Title" />
+    <meta property="og:description" content="@Description" />
+    <meta property="og:url" content="@CanonicalUrl" />
+    <meta property="og:type" content="website" />
+
+    @* Twitter card *@
+    <meta name="twitter:title" content="@Title" />
+    <meta name="twitter:description" content="@Description" />
+</HeadContent>
+
+@code {
+    private const string BaseUrl = "https://drive-flex.uk";
+
+    /// <summary>The full &lt;title&gt; text (aim for ~55–60 characters, keyword first).</summary>
+    [Parameter, EditorRequired] public string Title { get; set; } = "Drive-Flex";
+
+    /// <summary>Meta description shown under the title in search results (~150–160 characters).</summary>
+    [Parameter, EditorRequired] public string Description { get; set; } = "";
+
+    /// <summary>Root-relative path for this page, e.g. "/" or "/quote". Builds the canonical URL.</summary>
+    [Parameter, EditorRequired] public string Path { get; set; } = "/";
+
+    /// <summary>When true, asks search engines not to index this page.</summary>
+    [Parameter] public bool NoIndex { get; set; }
+
+    private string CanonicalUrl
+    {
+        get
+        {
+            var p = string.IsNullOrWhiteSpace(Path) ? "/" : Path;
+            if (!p.StartsWith('/')) p = "/" + p;
+            // Home stays as the bare domain with a trailing slash; other pages have no trailing slash.
+            return p == "/" ? BaseUrl + "/" : BaseUrl + p.TrimEnd('/');
+        }
+    }
+}
