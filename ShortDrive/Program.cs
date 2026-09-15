@@ -57,7 +57,31 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.EnsureCreatedAsync();
+
+    // EnsureCreated does not add new tables to an already-created SQLite database, so create the
+    // SitePages table if it is missing (safe no-op on fresh databases), then seed default content.
+    await db.Database.ExecuteSqlRawAsync(
+        "CREATE TABLE IF NOT EXISTS \"SitePages\" (" +
+        "\"Id\" INTEGER NOT NULL CONSTRAINT \"PK_SitePages\" PRIMARY KEY AUTOINCREMENT, " +
+        "\"Slug\" TEXT NOT NULL, \"Title\" TEXT NOT NULL, \"ContentHtml\" TEXT NOT NULL, " +
+        "\"UpdatedAt\" TEXT NOT NULL);");
+
+    await SiteContent.SeedAsync(db);
 }
+
+// Security response headers on every response (defence-in-depth against clickjacking, MIME
+// sniffing, referrer leakage, and unwanted browser features). frame-ancestors blocks the site
+// from being embedded in an <iframe> on another domain.
+app.Use(async (context, next) =>
+{
+    var headers = context.Response.Headers;
+    headers["X-Content-Type-Options"] = "nosniff";
+    headers["X-Frame-Options"] = "DENY";
+    headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()";
+    headers["Content-Security-Policy"] = "frame-ancestors 'self'";
+    await next();
+});
 
 if (!app.Environment.IsDevelopment())
 {

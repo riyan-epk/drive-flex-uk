@@ -114,14 +114,40 @@ public class SmtpEmailSender : IEmailSender
                 EnableSsl = useSsl
             };
 
+            var plainText =
+                $"""
+                Drive-Flex — Certificate of Motor Insurance
+
+                Payment confirmed. Your temporary motor insurance policy is now active and
+                registered on the Motor Insurance Database (MID).
+
+                Policy Number: {quote.PolicyNumber}
+                Policyholder:  {driverName}
+                Vehicle:       {vehicle}
+                Cover Period:  {coverStart:dd MMM yyyy HH:mm} - {coverEnd:dd MMM yyyy HH:mm} (UK time)
+                Premium Paid:  £{quote.TotalPremium:0.00}
+                MID Status:    ACTIVE
+
+                Underwritten by {underwriter}. Authorised and regulated by the Financial Conduct
+                Authority (FCA Firm Reference: {fca}).
+
+                This document serves as your Certificate of Motor Insurance.
+
+                Drive-Flex · Temporary Motor Insurance · United Kingdom
+                """;
+
             var msg = new MailMessage
             {
                 From = new MailAddress(fromEmail, fromName),
-                Subject = $"Your Drive-Flex Policy {quote.PolicyNumber} – Certificate of Motor Insurance",
-                Body = body,
-                IsBodyHtml = true
+                Subject = $"Your Drive-Flex Policy {quote.PolicyNumber} – Certificate of Motor Insurance"
             };
             msg.To.Add(new MailAddress(toEmail, driverName));
+            // Replies go back to the sending address rather than being undeliverable.
+            msg.ReplyToList.Add(new MailAddress(fromEmail, fromName));
+            // Send BOTH plain-text and HTML (multipart/alternative). HTML-only mail is far more
+            // likely to be filtered as spam; a text part improves deliverability significantly.
+            msg.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(plainText, null, "text/plain"));
+            msg.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(body, null, "text/html"));
 
             await client.SendMailAsync(msg, ct);
             _logger.LogInformation("Certificate email sent to {Email} for policy {Policy}", toEmail, quote.PolicyNumber);
@@ -154,15 +180,20 @@ public class SmtpEmailSender : IEmailSender
                 EnableSsl = useSsl
             };
 
+            const string testPlain = "This is a test email from the Drive-Flex admin panel. " +
+                "If you received this, your SMTP settings are working correctly.";
+            const string testHtml = "<p>This is a test email from the Drive-Flex admin panel. " +
+                "If you received this, your SMTP settings are working correctly.</p>";
+
             var msg = new MailMessage
             {
                 From = new MailAddress(from, fromDisplay),
-                Subject = "Drive-Flex SMTP test",
-                Body = "<p>This is a test email from the Drive-Flex admin panel. " +
-                       "If you received this, your SMTP settings are working correctly.</p>",
-                IsBodyHtml = true
+                Subject = "Drive-Flex SMTP test"
             };
             msg.To.Add(toEmail);
+            msg.ReplyToList.Add(new MailAddress(from, fromDisplay));
+            msg.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(testPlain, null, "text/plain"));
+            msg.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(testHtml, null, "text/html"));
 
             await client.SendMailAsync(msg, ct);
             _logger.LogInformation("SMTP test email sent to {Email} via {Host}", toEmail, host);

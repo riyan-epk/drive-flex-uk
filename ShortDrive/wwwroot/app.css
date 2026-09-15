@@ -82,6 +82,30 @@ main {
     animation: df-fade-in-up 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* ---- Editable content pages (About / Privacy / Terms / Contact) ---- */
+.df-page-content {
+    color: var(--df-text-secondary);
+    font-size: 1rem;
+    line-height: 1.75;
+}
+.df-page-content h2 {
+    font-family: var(--df-font-heading);
+    font-size: 1.4rem;
+    color: var(--df-text);
+    margin: 2rem 0 0.75rem;
+}
+.df-page-content h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--df-text);
+    margin: 1.5rem 0 0.5rem;
+}
+.df-page-content p { margin: 0 0 1rem; }
+.df-page-content ul, .df-page-content ol { margin: 0 0 1rem; padding-left: 1.25rem; }
+.df-page-content li { margin-bottom: 0.4rem; }
+.df-page-content a { color: var(--df-primary); text-decoration: none; font-weight: 600; }
+.df-page-content a:hover { text-decoration: underline; }
+
 /* Respect users who prefer reduced motion */
 @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
@@ -161,18 +185,43 @@ body {
 }
 
 .df-nav-link {
+    position: relative;
     font-size: 0.88rem;
     font-weight: 500;
     color: var(--df-text-secondary) !important;
     padding: 0.5rem 0.85rem !important;
     text-decoration: none;
     border-radius: var(--df-radius-sm);
-    transition: color var(--df-transition), background-color var(--df-transition);
+    transition: color var(--df-transition), background-color var(--df-transition), transform var(--df-transition);
 }
 
-.df-nav-link:hover, .df-nav-link.active {
+/* Animated underline that slides in from the left on hover / active */
+.df-nav-link::after {
+    content: "";
+    position: absolute;
+    left: 0.85rem;
+    right: 0.85rem;
+    bottom: 0.25rem;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--df-primary);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform var(--df-transition);
+}
+
+.df-nav-link:hover {
     color: var(--df-text) !important;
     background-color: var(--df-bg-subtle);
+    transform: translateY(-1px);
+}
+
+.df-nav-link.active {
+    color: var(--df-text) !important;
+}
+
+.df-nav-link:hover::after, .df-nav-link.active::after {
+    transform: scaleX(1);
 }
 
 .df-btn-nav {

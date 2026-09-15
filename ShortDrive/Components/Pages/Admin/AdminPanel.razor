@@ -112,6 +112,12 @@ else
                 </button>
             </li>
             <li class="nav-item">
+                <button class="nav-link rounded-pill @(_activeTab == "pages" ? "active bg-dark" : "text-dark")"
+                        @onclick='() => _activeTab = "pages"'>
+                    Content Pages
+                </button>
+            </li>
+            <li class="nav-item">
                 <button class="nav-link rounded-pill @(_activeTab == "security" ? "active bg-dark" : "text-dark")"
                         @onclick='() => _activeTab = "security"'>
                     Security
@@ -374,6 +380,55 @@ else
                 </div>
             </div>
         }
+        else if (_activeTab == "pages")
+        {
+            <div class="p-4 bg-white rounded-4 border shadow-sm" style="max-width: 840px;">
+                <h5 class="fw-bold mb-1">Website Content Pages</h5>
+                <p class="small text-muted">
+                    Edit the public pages (About, Privacy Policy, Terms of Business, Contact). Basic HTML is
+                    supported — headings <code>&lt;h2&gt;</code>, paragraphs <code>&lt;p&gt;</code>, lists
+                    <code>&lt;ul&gt;&lt;li&gt;</code>, and links <code>&lt;a href="..."&gt;</code>.
+                </p>
+
+                @if (_pages.Count == 0)
+                {
+                    <div class="text-muted small">No pages found.</div>
+                }
+                else
+                {
+                    @foreach (var p in _pages)
+                    {
+                        <div class="border rounded-3 p-3 mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-light text-dark border">/@p.Slug</span>
+                                <a href="/@p.Slug" target="_blank" class="small">View page &#8599;</a>
+                            </div>
+                            <label class="form-label small fw-semibold">Page title</label>
+                            <input type="text" class="form-control mb-2" @bind="p.Title" />
+                            <label class="form-label small fw-semibold">Content (HTML)</label>
+                            <textarea class="form-control font-monospace" style="min-height: 220px; font-size: 0.82rem;" @bind="p.ContentHtml"></textarea>
+                            <div class="d-flex align-items-center gap-2 mt-2">
+                                <button type="button" class="btn btn-dark rounded-pill px-4 btn-sm"
+                                        @onclick="() => SavePageAsync(p)" disabled="@_pageSaving">
+                                    @if (_pageSaving && _savingSlug == p.Slug)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-1"></span><span>Saving...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Save page</span>
+                                    }
+                                </button>
+                                @if (_pageSavedSlug == p.Slug)
+                                {
+                                    <span class="text-success small fw-semibold">&#10003; Saved</span>
+                                }
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        }
         else if (_activeTab == "security")
         {
             <div class="p-4 bg-white rounded-4 border shadow-sm" style="max-width: 480px;">
@@ -501,6 +556,12 @@ else
     private string? _pwdError;
     private bool _pwdSuccess;
 
+    // Content pages editor state
+    private List<SitePage> _pages = new();
+    private bool _pageSaving;
+    private string? _savingSlug;
+    private string? _pageSavedSlug;
+
     // Connection-test state
     private bool _stripeTesting; private bool _stripeTestOk; private string? _stripeTestResult;
     private bool _dvsaTesting; private bool _dvsaTestOk; private string? _dvsaTestResult;
@@ -558,6 +619,24 @@ else
             _settings.DvsaApiKey = Config["Dvsa:ApiKey"];
 
         _quotes = await QuoteSvc.GetAllQuotesAsync();
+        _pages = await QuoteSvc.GetAllPagesAsync();
+    }
+
+    private async Task SavePageAsync(SitePage page)
+    {
+        _pageSaving = true;
+        _savingSlug = page.Slug;
+        _pageSavedSlug = null;
+        try
+        {
+            await QuoteSvc.UpdatePageAsync(page);
+            _pageSavedSlug = page.Slug;
+        }
+        finally
+        {
+            _pageSaving = false;
+            _savingSlug = null;
+        }
     }
 
     private async Task SaveSettingsAsync()

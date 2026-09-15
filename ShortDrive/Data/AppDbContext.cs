@@ -12,11 +12,15 @@ public class AppDbContext : DbContext
     public DbSet<Quote> Quotes => Set<Quote>();
     public DbSet<Lead> Leads => Set<Lead>();
     public DbSet<PricingSettings> PricingSettings => Set<PricingSettings>();
+    public DbSet<SitePage> SitePages => Set<SitePage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Vehicle>()
             .HasIndex(v => v.Registration);
+
+        modelBuilder.Entity<SitePage>()
+            .HasIndex(p => p.Slug).IsUnique();
 
         modelBuilder.Entity<Quote>()
             .Property(q => q.TotalPremium).HasPrecision(18, 2);

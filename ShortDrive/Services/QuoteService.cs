@@ -304,6 +304,24 @@ public class QuoteService
             .ToListAsync(ct);
     }
 
+    // ---- Admin-editable content pages (About / Privacy / Terms / Contact) ----
+
+    public async Task<SitePage?> GetPageAsync(string slug, CancellationToken ct = default)
+        => await _db.SitePages.AsNoTracking().FirstOrDefaultAsync(p => p.Slug == slug, ct);
+
+    public async Task<List<SitePage>> GetAllPagesAsync(CancellationToken ct = default)
+        => await _db.SitePages.OrderBy(p => p.Slug).ToListAsync(ct);
+
+    public async Task UpdatePageAsync(SitePage page, CancellationToken ct = default)
+    {
+        var existing = await _db.SitePages.FirstOrDefaultAsync(p => p.Id == page.Id, ct);
+        if (existing is null) return;
+        existing.Title = page.Title;
+        existing.ContentHtml = page.ContentHtml;
+        existing.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+    }
+
     private static decimal CalculateRiskMultiplier(DriverFormModel d)
     {
         var m = 1.0m;

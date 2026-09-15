@@ -1,0 +1,40 @@
+@page "/about"
+@page "/privacy"
+@page "/terms"
+@page "/contact"
+@inject QuoteService QuoteSvc
+@inject NavigationManager Nav
+
+<PageTitle>@((_page?.Title ?? "Drive-Flex") + " – Drive-Flex")</PageTitle>
+
+<div class="container py-5" style="max-width: 820px; min-height: 70vh;">
+    @if (_page is null)
+    {
+        <div class="text-center py-5">
+            <h1 class="df-section-heading mb-3">Page not found</h1>
+            <a href="/" class="df-btn-cta" style="max-width: 200px; margin: 0 auto;">
+                <span>Return home</span><span>&rarr;</span>
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="section-label mb-2">DRIVE-FLEX</div>
+        <h1 class="df-section-heading mb-4">@_page.Title</h1>
+        <div class="df-page-content">
+            @((MarkupString)_page.ContentHtml)
+        </div>
+        <p class="text-muted small mt-5 mb-0">Last updated @_page.UpdatedAt.ToString("dd MMM yyyy")</p>
+    }
+</div>
+
+@code {
+    private SitePage? _page;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var slug = new Uri(Nav.Uri).AbsolutePath.Trim('/').ToLowerInvariant();
+        if (string.IsNullOrEmpty(slug)) slug = "about";
+        _page = await QuoteSvc.GetPageAsync(slug);
+    }
+}

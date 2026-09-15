@@ -4,7 +4,51 @@
 > been done, how it was verified, and what still remains. If the chat is deleted, read this
 > first — it tells you the full state so you can continue without re-discovering everything.
 >
-> **Last updated:** 2026-09-11
+> **Last updated:** 2026-09-15
+
+---
+
+## SESSION UPDATE — 2026-09-15 (deployment + fixes)
+
+**The app is deployed and live** on an **AlmaLinux 10 VPS** (HostWorld), IP `191.101.59.65`,
+domain **drive-flex.uk**, behind Nginx + systemd (`driveflex` service) with Let's Encrypt HTTPS.
+Deployment kit lives in `deploy/` (`DEPLOY-LINUX.md` = master guide, `setup-server.sh` = one-shot).
+The repo-root `DEPLOYMENT.md` (Windows/IIS) does NOT apply — this server is Linux.
+
+**Redeploy an update** (on the server): `systemctl stop driveflex` → `cd /root/drive-flex-uk && git pull && dotnet publish ShortDrive/ShortDrive.csproj -c Release -o /var/www/driveflex` → `chown -R driveflex:driveflex /var/www/driveflex && systemctl start driveflex`.
+
+**Changes made this session (all committed):**
+- **DVSA vehicle lookup fixed** — `DvsaClient` now maps the MOT History API fields correctly
+  (engine `engineSize`, first-registered `registrationDate`, year from `manufactureDate`, MOT
+  status/expiry + odometer from `motTests`). `EnrichFromMotHistory()` does this. The dossier UI
+  (`QuoteWizard.razor`) now shows only fields the API actually returns; CO2/Euro/type-approval/road-tax
+  were REMOVED because the MOT History API does not provide them (they require the separate **DVLA
+  Vehicle Enquiry Service (VES)** API — not yet integrated; would need a VES key).
+- **UI/UX** — quote wizard now prerenders (no blank flash), scrolls to top on each step change (JS
+  `scrollTo`), fades between steps; fixed the black focus outline on the hero `<h1>`; animated nav-bar
+  underline hover; smooth scrolling; reduced-motion support. New favicon (`wwwroot/favicon.svg`, blue "DF").
+- **Editable content pages** — new `SitePage` entity + `SitePages` table (created at startup via
+  `CREATE TABLE IF NOT EXISTS` because EnsureCreated won't alter an existing DB; seeded by
+  `Data/SiteContent.cs`). Public pages `/about`, `/privacy`, `/terms`, `/contact` render from DB
+  (`Components/Pages/SitePageView.razor`, one component, 4 `@page` routes, slug from URL path).
+  Admin panel has a **Content Pages** tab to edit title + HTML per page (`QuoteService.GetPageAsync/
+  GetAllPagesAsync/UpdatePageAsync`). `/claims` is a static designed page (not DB-editable yet).
+  Contact email used throughout: **supportdriveflex@gmail.com**.
+- **Email deliverability** — `SmtpEmailSender` now sends multipart (plain-text + HTML) with Reply-To
+  (reduces spam). For real inbox delivery the user must add SPF/DKIM/DMARC — see below.
+- **Security headers** middleware in `Program.cs` (X-Content-Type-Options, X-Frame-Options: DENY,
+  Referrer-Policy, Permissions-Policy, CSP frame-ancestors).
+- **Removed fake claims** — homepage "4.9 on Trustpilot" → "Secure Stripe Checkout". NOTE STILL TODO:
+  homepage stats strip still shows unverified "Over 1.8m policies issued" / "58s median time to cover"
+  — should be replaced with truthful copy (user was asked, awaiting confirmation).
+
+**Outstanding / next session:**
+- Gmail SMTP test emails land in **spam** until domain email auth is set up. Real fix: send from an
+  `@drive-flex.uk` address via a provider with SPF/DKIM (Google Workspace, or Brevo/SendGrid free),
+  add SPF + DKIM + DMARC DNS records at Namecheap. Free-Gmail sending will always be spam-prone.
+- Optionally integrate DVLA VES API to fill CO2/tax/Euro/type-approval.
+- Replace the fake homepage stats (1.8m policies, 58s) with truthful copy.
+- Consider making `/claims` DB-editable too (same pattern as the other 4 pages).
 
 ---
 
