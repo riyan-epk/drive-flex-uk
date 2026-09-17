@@ -672,6 +672,14 @@ main { animation: df-fade-in-up 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
 .addon-checkbox { width: 20px; height: 20px; accent-color: var(--df-primary); cursor: pointer; }
 .addon-price { font-weight: 800; font-size: 0.95rem; color: var(--df-navy); }
 
+/* Accepted payment methods strip */
+.df-payment-strip { margin-top: 1.75rem; padding: 1.5rem 1.75rem; background: var(--df-bg-card); border: 1px solid var(--df-border); border-radius: var(--df-radius-card); text-align: center; }
+.df-payment-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.6rem; margin-bottom: 0.85rem; }
+.df-pay-badge { display: inline-flex; align-items: center; gap: 0.4rem; background: var(--df-bg-subtle); border: 1px solid var(--df-border); border-radius: var(--df-radius-sm); padding: 0.4rem 0.75rem; font-size: 0.76rem; font-weight: 700; color: var(--df-navy); letter-spacing: 0.02em; transition: border-color var(--df-transition), box-shadow var(--df-transition); }
+.df-pay-badge:hover { border-color: var(--df-primary); box-shadow: 0 2px 8px rgba(21,94,239,0.10); }
+.df-pay-badge svg { flex-shrink: 0; border-radius: 3px; }
+.df-payment-trust { display: flex; align-items: center; justify-content: center; gap: 0.45rem; font-size: 0.76rem; color: var(--df-text-muted); font-weight: 600; }
+
 /* Sticky bottom bar */
 .df-bottom-bar { position: sticky; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); border-top: 1px solid var(--df-border); padding: 0.85rem 0; box-shadow: 0 -6px 24px rgba(17,25,54,0.06); z-index: 100; }
 .df-bottom-inner { display: flex; justify-content: space-between; align-items: center; }

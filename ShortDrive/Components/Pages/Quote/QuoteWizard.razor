@@ -419,6 +419,44 @@
             </div>
             <div class="addon-price">+£@(_pricingSettings?.ComprehensiveUpgradePrice.ToString("0.00") ?? "2.95")</div>
         </div>
+
+        <div class="df-payment-strip">
+            <div class="section-label mb-2">SECURE CHECKOUT · ACCEPTED WORLDWIDE</div>
+            <div class="df-payment-badges">
+                <span class="df-pay-badge">
+                    <svg viewBox="0 0 24 16" width="38" height="24" fill="none"><rect width="24" height="16" rx="2" fill="#1A1F71"/><path d="M9.5 10.5L10.8 5.5h1.5l-1.3 5h-1.5zm6.1-5l-1.4 3.4-.6-3.4H12l1.5 5h1.4l2.2-5h-1.5zm-8.8 0L5.2 9l-.2-1.2-.6-2.3H2.5l0 .2c.9.2 1.7.6 2.2 1l1.2 3.8h1.5l2.3-5H6.8z" fill="#fff"/></svg>
+                    <span>Visa</span>
+                </span>
+                <span class="df-pay-badge">
+                    <svg viewBox="0 0 24 16" width="38" height="24" fill="none"><rect width="24" height="16" rx="2" fill="#252525"/><circle cx="9.5" cy="8" r="5" fill="#EB001B"/><circle cx="14.5" cy="8" r="5" fill="#F79E1B"/><path d="M12 4.3a5 5 0 010 7.4 5 5 0 000-7.4z" fill="#FF5F00"/></svg>
+                    <span>Mastercard</span>
+                </span>
+                <span class="df-pay-badge">
+                    <svg viewBox="0 0 24 16" width="38" height="24" fill="none"><rect width="24" height="16" rx="2" fill="#2E77BC"/><path d="M12 3l1 2.8h3l-2.4 1.7.9 2.8L12 8.6 9.5 10.3l.9-2.8L8 5.8h3L12 3z" fill="#fff"/></svg>
+                    <span>Amex</span>
+                </span>
+                <span class="df-pay-badge">
+                    <svg viewBox="0 0 24 16" width="38" height="24" fill="none"><rect width="24" height="16" rx="2" fill="#000"/><path d="M4.5 6.2C5.3 5.1 6.7 4.5 8 4.5s2.3.3 3.1 1c.4.4.7.8.9 1.3.2-.5.5-.9.9-1.3.8-.7 1.9-1 3.1-1s2.7.6 3.5 1.7c.5.8.5 1.7.5 2.6v3.7h-2.5V8.8c0-.4 0-.9-.3-1.2-.3-.4-.8-.5-1.2-.5-.5 0-1 .2-1.3.6-.3.4-.3.9-.3 1.4v3.4h-2.5V8.8c0-.4 0-.9-.3-1.2-.3-.4-.8-.5-1.2-.5-.5 0-1 .2-1.3.6-.3.4-.3.9-.3 1.4v3.4H4V8.8c0-.9 0-1.8.5-2.6z" fill="#fff"/></svg>
+                    <span>Apple&nbsp;Pay</span>
+                </span>
+                <span class="df-pay-badge">
+                    <svg viewBox="0 0 24 16" width="38" height="24" fill="none"><rect width="24" height="16" rx="2" fill="#fff" stroke="#E5EAF3"/><path d="M12.2 4.1c.6 0 1.3.2 1.7.7l-.8.7c-.2-.3-.5-.4-.9-.4-.7 0-1.3.6-1.3 1.3s.6 1.3 1.3 1.3c.5 0 .9-.3 1-.7h-1.1V6.1h2.1c0 .2.1.4.1.6 0 1.4-1 2.4-2.2 2.4-1.3 0-2.3-1-2.3-2.3s1-2.7 2.4-2.7zM6 6.1h1.8c.5 0 1 .4 1 .9s-.4.9-1 .9H7v1.3H6V6.1zm5.2 5.3l1.5-2.5h1.2l-2.2 3.5h-.9l-2.2-3.5H9.8l1.4 2.5z" fill="#5F6368"/></svg>
+                    <span>Google&nbsp;Pay</span>
+                </span>
+                <span class="df-pay-badge">
+                    <svg viewBox="0 0 24 16" width="38" height="24" fill="none"><rect width="24" height="16" rx="2" fill="#006FCF"/><text x="12" y="10.5" text-anchor="middle" fill="#fff" font-size="5" font-weight="700" font-family="Arial">JCB</text></svg>
+                    <span>JCB</span>
+                </span>
+                <span class="df-pay-badge">
+                    <svg viewBox="0 0 24 16" width="38" height="24" fill="none"><rect width="24" height="16" rx="2" fill="#1A1F71"/><text x="12" y="10.5" text-anchor="middle" fill="#fff" font-size="4" font-weight="700" font-family="Arial">UnionPay</text></svg>
+                    <span>UnionPay</span>
+                </span>
+            </div>
+            <div class="df-payment-trust">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="var(--df-success)"><path d="M8 0a8 8 0 100 16A8 8 0 008 0zm-.5 11.5l-3-3 1-1 2 2 4.5-4.5 1 1-5.5 5.5z"/></svg>
+                <span>256-bit SSL encrypted &middot; PCI-DSS compliant &middot; Powered by Stripe</span>
+            </div>
+        </div>
     }
     </div>
 
@@ -731,7 +769,8 @@
                 _latestQuote.QuoteId,
                 _latestQuote.TotalPremium,
                 _latestQuote.DurationLabel,
-                _vehicle.Registration);
+                _vehicle.Registration,
+                _customerEmail);
 
             Nav.NavigateTo(stripeUrl, forceLoad: true);
         }

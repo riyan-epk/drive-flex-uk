@@ -25,6 +25,7 @@ public class PaymentService
         decimal totalPremium,
         string durationLabel,
         string vehicleReg,
+        string? customerEmail = null,
         CancellationToken ct = default)
     {
         var baseUrl = _config["App:BaseUrl"] ?? "http://localhost:5000";
@@ -39,19 +40,28 @@ public class PaymentService
 
         var unitAmountPence = (long)(totalPremium * 100);
 
+        // Omit payment_method_types so Stripe uses "automatic payment methods" —
+        // all card brands (Visa, Mastercard, Amex, JCB, UnionPay, Diners, Discover),
+        // Apple Pay, Google Pay, and any other methods enabled in the Stripe Dashboard
+        // are shown automatically, including to international customers.
         var form = new List<KeyValuePair<string, string>>
         {
-            new("payment_method_types[0]", "card"),
             new("line_items[0][price_data][currency]", "gbp"),
             new("line_items[0][price_data][unit_amount]", unitAmountPence.ToString()),
             new("line_items[0][price_data][product_data][name]", $"Drive-Flex · {durationLabel} Cover ({vehicleReg})"),
             new("line_items[0][price_data][product_data][description]", "Temporary comprehensive motor insurance"),
             new("line_items[0][quantity]", "1"),
             new("mode", "payment"),
+            new("locale", "auto"),
             new("success_url", $"{baseUrl}/quote/success?session_id={{CHECKOUT_SESSION_ID}}&quote_id={quoteId}"),
             new("cancel_url", $"{baseUrl}/quote"),
             new("metadata[quote_id]", quoteId.ToString())
         };
+
+        // Pre-fill the customer's email on the Stripe Checkout page so they
+        // don't have to re-type it (smoother experience for all customers).
+        if (!string.IsNullOrWhiteSpace(customerEmail))
+            form.Add(new("customer_email", customerEmail.Trim()));
 
         using var request = new HttpRequestMessage(HttpMethod.Post, "https://api.stripe.com/v1/checkout/sessions")
         {
