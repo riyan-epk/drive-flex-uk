@@ -130,6 +130,7 @@ public class QuoteService
         existing.FcaFirmReference = updated.FcaFirmReference;
         existing.StripeSecretKey = updated.StripeSecretKey;
         existing.StripePublishableKey = updated.StripePublishableKey;
+        existing.StripeWebhookSecret = updated.StripeWebhookSecret;
         existing.StripeTestMode = updated.StripeTestMode;
 
         // DVSA / DVLA API credentials

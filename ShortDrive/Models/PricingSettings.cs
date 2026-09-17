@@ -33,6 +33,7 @@ public class PricingSettings
     // Stripe Config overrides
     public string? StripeSecretKey { get; set; }
     public string? StripePublishableKey { get; set; }
+    public string? StripeWebhookSecret { get; set; }
     public bool StripeTestMode { get; set; } = true;
 
     // DVSA/DVLA API overrides

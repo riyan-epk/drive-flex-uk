@@ -248,6 +248,11 @@ else
                             <input type="password" class="form-control" @bind="_settings.StripeSecretKey" placeholder="sk_test_..." />
                             <div class="form-text small">Secret key is never exposed to the frontend.</div>
                         </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Stripe Webhook Secret</label>
+                            <input type="password" class="form-control" @bind="_settings.StripeWebhookSecret" placeholder="whsec_..." />
+                            <div class="form-text small">From Stripe Dashboard → Developers → Webhooks. Endpoint URL: <code>https://drive-flex.uk/webhook/stripe</code></div>
+                        </div>
                         <div class="form-check form-switch mb-3">
                             <input class="form-check-input" type="checkbox" id="testModeSwitch" @bind="_settings.StripeTestMode" />
                             <label class="form-check-label small fw-semibold" for="testModeSwitch">Test Mode</label>
