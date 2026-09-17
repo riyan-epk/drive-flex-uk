@@ -14,6 +14,32 @@
          Path="/quote" />
 
 <div class="container py-4" style="max-width: 920px; min-height: 80vh;">
+    @if (_showCancelledBanner)
+    {
+        <div class="df-cancelled-banner">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--df-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+                <strong>Payment was cancelled</strong>
+            </div>
+            <p class="small text-muted mb-3">No payment was taken. Your quote details are saved — you can start a new quote below or retry payment for your existing quote.</p>
+            <div class="d-flex gap-2 flex-wrap">
+                <button type="button" class="df-btn-cta df-btn-primary" style="font-size: 0.88rem; padding: 0.6rem 1.5rem;" @onclick="RetryPaymentAsync" disabled="@_isProcessing">
+                    @if (_isProcessing)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span><span>Preparing...</span>
+                    }
+                    else
+                    {
+                        <span>Retry Payment &rarr;</span>
+                    }
+                </button>
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4" style="font-size: 0.88rem;" @onclick="() => _showCancelledBanner = false">
+                    Start New Quote
+                </button>
+            </div>
+        </div>
+    }
+
     <div class="wizard-header-strip">
         <span>Step <strong>@_step</strong> / 5</span>
         <span class="text-uppercase fw-semibold" style="letter-spacing: 0.05em;">@StepCategoryLabel(_step)</span>
@@ -421,40 +447,23 @@
         </div>
 
         <div class="df-payment-strip">
-            <div class="section-label mb-2">SECURE CHECKOUT · ACCEPTED WORLDWIDE</div>
-            <div class="df-payment-badges">
-                <span class="df-pay-badge">
-                    <svg viewBox="0 0 24 16" width="38" height="24" fill="none"><rect width="24" height="16" rx="2" fill="#1A1F71"/><path d="M9.5 10.5L10.8 5.5h1.5l-1.3 5h-1.5zm6.1-5l-1.4 3.4-.6-3.4H12l1.5 5h1.4l2.2-5h-1.5zm-8.8 0L5.2 9l-.2-1.2-.6-2.3H2.5l0 .2c.9.2 1.7.6 2.2 1l1.2 3.8h1.5l2.3-5H6.8z" fill="#fff"/></svg>
-                    <span>Visa</span>
-                </span>
-                <span class="df-pay-badge">
-                    <svg viewBox="0 0 24 16" width="38" height="24" fill="none"><rect width="24" height="16" rx="2" fill="#252525"/><circle cx="9.5" cy="8" r="5" fill="#EB001B"/><circle cx="14.5" cy="8" r="5" fill="#F79E1B"/><path d="M12 4.3a5 5 0 010 7.4 5 5 0 000-7.4z" fill="#FF5F00"/></svg>
-                    <span>Mastercard</span>
-                </span>
-                <span class="df-pay-badge">
-                    <svg viewBox="0 0 24 16" width="38" height="24" fill="none"><rect width="24" height="16" rx="2" fill="#2E77BC"/><path d="M12 3l1 2.8h3l-2.4 1.7.9 2.8L12 8.6 9.5 10.3l.9-2.8L8 5.8h3L12 3z" fill="#fff"/></svg>
-                    <span>Amex</span>
-                </span>
-                <span class="df-pay-badge">
-                    <svg viewBox="0 0 24 16" width="38" height="24" fill="none"><rect width="24" height="16" rx="2" fill="#000"/><path d="M4.5 6.2C5.3 5.1 6.7 4.5 8 4.5s2.3.3 3.1 1c.4.4.7.8.9 1.3.2-.5.5-.9.9-1.3.8-.7 1.9-1 3.1-1s2.7.6 3.5 1.7c.5.8.5 1.7.5 2.6v3.7h-2.5V8.8c0-.4 0-.9-.3-1.2-.3-.4-.8-.5-1.2-.5-.5 0-1 .2-1.3.6-.3.4-.3.9-.3 1.4v3.4h-2.5V8.8c0-.4 0-.9-.3-1.2-.3-.4-.8-.5-1.2-.5-.5 0-1 .2-1.3.6-.3.4-.3.9-.3 1.4v3.4H4V8.8c0-.9 0-1.8.5-2.6z" fill="#fff"/></svg>
-                    <span>Apple&nbsp;Pay</span>
-                </span>
-                <span class="df-pay-badge">
-                    <svg viewBox="0 0 24 16" width="38" height="24" fill="none"><rect width="24" height="16" rx="2" fill="#fff" stroke="#E5EAF3"/><path d="M12.2 4.1c.6 0 1.3.2 1.7.7l-.8.7c-.2-.3-.5-.4-.9-.4-.7 0-1.3.6-1.3 1.3s.6 1.3 1.3 1.3c.5 0 .9-.3 1-.7h-1.1V6.1h2.1c0 .2.1.4.1.6 0 1.4-1 2.4-2.2 2.4-1.3 0-2.3-1-2.3-2.3s1-2.7 2.4-2.7zM6 6.1h1.8c.5 0 1 .4 1 .9s-.4.9-1 .9H7v1.3H6V6.1zm5.2 5.3l1.5-2.5h1.2l-2.2 3.5h-.9l-2.2-3.5H9.8l1.4 2.5z" fill="#5F6368"/></svg>
-                    <span>Google&nbsp;Pay</span>
-                </span>
-                <span class="df-pay-badge">
-                    <svg viewBox="0 0 24 16" width="38" height="24" fill="none"><rect width="24" height="16" rx="2" fill="#006FCF"/><text x="12" y="10.5" text-anchor="middle" fill="#fff" font-size="5" font-weight="700" font-family="Arial">JCB</text></svg>
-                    <span>JCB</span>
-                </span>
-                <span class="df-pay-badge">
-                    <svg viewBox="0 0 24 16" width="38" height="24" fill="none"><rect width="24" height="16" rx="2" fill="#1A1F71"/><text x="12" y="10.5" text-anchor="middle" fill="#fff" font-size="4" font-weight="700" font-family="Arial">UnionPay</text></svg>
-                    <span>UnionPay</span>
-                </span>
+            <div class="df-payment-lock">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            </div>
+            <div class="section-label mb-1">SECURE CHECKOUT</div>
+            <p class="small mb-3" style="color: var(--df-text-secondary);">All major international credit &amp; debit cards accepted worldwide.</p>
+            <div class="df-payment-icons">
+                <span class="df-card-icon" title="Visa"><svg viewBox="0 0 38 24" fill="none"><rect width="38" height="24" rx="4" fill="#1A1F71"/><path d="M15 15.5l2-8h2.4l-2 8H15zm9.7-8l-2.2 5.5-1-5.5h-2.3l2.4 8h2.2l3.5-8H24.7zm-14 0L8.3 14l-.4-1.8-1-3.7H4l0 .3c1.4.4 2.7.9 3.5 1.6l1.9 6h2.4l3.6-8H10.7z" fill="#fff"/></svg></span>
+                <span class="df-card-icon" title="Mastercard"><svg viewBox="0 0 38 24" fill="none"><rect width="38" height="24" rx="4" fill="#252525"/><circle cx="15" cy="12" r="7" fill="#EB001B"/><circle cx="23" cy="12" r="7" fill="#F79E1B"/><path d="M19 6.5a7 7 0 010 11 7 7 0 000-11z" fill="#FF5F00"/></svg></span>
+                <span class="df-card-icon" title="American Express"><svg viewBox="0 0 38 24" fill="none"><rect width="38" height="24" rx="4" fill="#2E77BC"/><path d="M19 5l1.5 4h4.2l-3.4 2.5 1.3 4L19 13l-3.6 2.5 1.3-4L13.3 9h4.2L19 5z" fill="#fff"/></svg></span>
+                <span class="df-card-icon" title="Apple Pay"><svg viewBox="0 0 38 24" fill="none"><rect width="38" height="24" rx="4" fill="#000"/><text x="19" y="14.5" text-anchor="middle" fill="#fff" font-size="9" font-weight="600" font-family="-apple-system,Arial">Pay</text></svg></span>
+                <span class="df-card-icon" title="Google Pay"><svg viewBox="0 0 38 24" fill="none"><rect width="38" height="24" rx="4" fill="#fff" stroke="#E5EAF3"/><text x="19" y="14.5" text-anchor="middle" fill="#5F6368" font-size="8" font-weight="700" font-family="Arial">GPay</text></svg></span>
+                <span class="df-card-icon" title="JCB"><svg viewBox="0 0 38 24" fill="none"><rect width="38" height="24" rx="4" fill="#006FCF"/><text x="19" y="15" text-anchor="middle" fill="#fff" font-size="10" font-weight="700" font-family="Arial">JCB</text></svg></span>
+                <span class="df-card-icon" title="UnionPay"><svg viewBox="0 0 38 24" fill="none"><rect width="38" height="24" rx="4" fill="#1A1F71"/><text x="19" y="14" text-anchor="middle" fill="#fff" font-size="6.5" font-weight="700" font-family="Arial">UnionPay</text></svg></span>
             </div>
             <div class="df-payment-trust">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="var(--df-success)"><path d="M8 0a8 8 0 100 16A8 8 0 008 0zm-.5 11.5l-3-3 1-1 2 2 4.5-4.5 1 1-5.5 5.5z"/></svg>
-                <span>256-bit SSL encrypted &middot; PCI-DSS compliant &middot; Powered by Stripe</span>
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="var(--df-success)"><path d="M8 0a8 8 0 100 16A8 8 0 008 0zm-.5 11.5l-3-3 1-1 2 2 4.5-4.5 1 1-5.5 5.5z"/></svg>
+                <span>256-bit SSL &middot; PCI-DSS compliant &middot; Powered by Stripe</span>
             </div>
         </div>
     }
@@ -525,6 +534,8 @@
 @code {
     [SupplyParameterFromQuery(Name = "reg")] public string? QueryReg { get; set; }
     [SupplyParameterFromQuery(Name = "class")] public string? QueryClass { get; set; }
+    [SupplyParameterFromQuery(Name = "cancelled")] public string? QueryCancelled { get; set; }
+    [SupplyParameterFromQuery(Name = "quote_id")] public int CancelledQuoteId { get; set; }
 
     private int _step = 1;
     private string _regInput = "";
@@ -533,6 +544,7 @@
     private bool _isProcessing;
     private string? _lookupError;
     private string? _paymentError;
+    private bool _showCancelledBanner;
 
     private VehicleDto? _vehicle;
     private DriverFormModel _driver = new();
@@ -552,6 +564,12 @@
             _clientKey = ip;
 
         _pricingSettings = await QuoteSvc.GetPricingSettingsAsync();
+
+        // Returning from a cancelled Stripe checkout — show a friendly banner with retry option.
+        if (QueryCancelled == "1" && CancelledQuoteId > 0)
+        {
+            _showCancelledBanner = true;
+        }
 
         if (!string.IsNullOrWhiteSpace(QueryClass))
             _cover.VehicleClass = QueryClass;
@@ -777,6 +795,46 @@
         catch
         {
             _paymentError = "Unable to start checkout. Please check your details and try again.";
+            _isProcessing = false;
+        }
+    }
+
+    /// <summary>
+    /// Re-creates a Stripe checkout session for a cancelled quote and redirects back to Stripe.
+    /// </summary>
+    private async Task RetryPaymentAsync()
+    {
+        if (CancelledQuoteId <= 0 || _isProcessing) return;
+        _isProcessing = true;
+
+        try
+        {
+            var quote = await QuoteSvc.GetQuoteWithDetailsAsync(CancelledQuoteId);
+            if (quote is null)
+            {
+                _paymentError = "Quote not found. Please start a new quote.";
+                _isProcessing = false;
+                return;
+            }
+
+            var durationLabel = quote.DurationHours switch
+            {
+                1 => "1 Hour", 24 => "1 Day", 168 => "7 Days", 672 => "28 Days",
+                _ when quote.DurationHours < 24 => $"{quote.DurationHours} Hours",
+                _ => $"{quote.DurationHours / 24} Days"
+            };
+
+            var stripeUrl = await PaymentSvc.CreateCheckoutSessionAsync(
+                quote.Id, quote.TotalPremium, durationLabel,
+                quote.Vehicle?.Registration ?? "UNKNOWN",
+                quote.CustomerEmail);
+
+            Nav.NavigateTo(stripeUrl, forceLoad: true);
+        }
+        catch
+        {
+            _paymentError = "Unable to restart checkout. Please start a new quote.";
+            _showCancelledBanner = false;
             _isProcessing = false;
         }
     }

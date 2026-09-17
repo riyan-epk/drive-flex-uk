@@ -54,7 +54,7 @@ public class PaymentService
             new("mode", "payment"),
             new("locale", "auto"),
             new("success_url", $"{baseUrl}/quote/success?session_id={{CHECKOUT_SESSION_ID}}&quote_id={quoteId}"),
-            new("cancel_url", $"{baseUrl}/quote"),
+            new("cancel_url", $"{baseUrl}/quote?cancelled=1&quote_id={quoteId}"),
             new("metadata[quote_id]", quoteId.ToString())
         };
 
