@@ -333,7 +333,7 @@
                     <input type="date" class="form-control" @bind="_driver.DateOfBirth" />
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label small fw-semibold text-muted">UK Driving Licence Number</label>
+                    <label class="form-label small fw-semibold text-muted">UK Driving Licence Number <span class="text-muted fw-normal">(optional)</span></label>
                     <input type="text" class="form-control text-uppercase" @bind="_driver.LicenceNumber" placeholder="SMITH751010AB9CD" />
                 </div>
                 <div class="col-12">
@@ -737,9 +737,6 @@
             return "Drivers must be at least 17 years old to be insured.";
         if (age > 100)
             return "Please check the date of birth entered.";
-
-        if (string.IsNullOrWhiteSpace(_driver.LicenceNumber))
-            return "Please enter your driving licence number.";
 
         if (string.IsNullOrWhiteSpace(_driver.Postcode))
             return "Please enter your postcode.";

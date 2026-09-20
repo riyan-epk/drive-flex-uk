@@ -573,6 +573,54 @@ main { animation: df-fade-in-up 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
 .df-usecase-desc { font-size: 0.9rem; color: var(--df-text-secondary); line-height: 1.6; margin: 0; }
 
 /* ============================================================
+   Customer reviews
+   ============================================================ */
+.df-reviews-summary {
+    display: inline-flex; align-items: center; gap: 0.6rem;
+    flex-wrap: wrap; justify-content: center;
+}
+.df-reviews-summary-text { font-size: 0.9rem; color: var(--df-text-secondary); }
+.df-reviews-summary-text strong { color: var(--df-navy); }
+.df-review-stars { display: inline-flex; gap: 2px; color: var(--df-gold); }
+.df-review-stars svg { width: 18px; height: 18px; }
+.df-review-card {
+    background: var(--df-bg-card);
+    border: 1px solid var(--df-border);
+    border-radius: var(--df-radius-card);
+    padding: 1.85rem;
+    height: 100%;
+    display: flex; flex-direction: column;
+    box-shadow: var(--df-shadow-card);
+    transition: transform var(--df-transition), box-shadow var(--df-transition), border-color var(--df-transition);
+    position: relative; overflow: hidden; margin: 0;
+}
+.df-review-card::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--df-grad-primary); transform: scaleY(0); transform-origin: top; transition: transform var(--df-transition);
+}
+.df-review-card:hover { border-color: rgba(21,94,239,0.28); box-shadow: var(--df-shadow-hover); transform: translateY(-5px); }
+.df-review-card:hover::before { transform: scaleY(1); }
+.df-review-quote {
+    font-size: 0.95rem; color: var(--df-text-secondary); line-height: 1.65;
+    margin: 0 0 1.4rem; flex: 1 1 auto;
+}
+.df-review-quote::before { content: "\201C"; color: var(--df-primary); font-weight: 700; }
+.df-review-quote::after { content: "\201D"; color: var(--df-primary); font-weight: 700; }
+.df-review-author { display: flex; align-items: center; gap: 0.8rem; }
+.df-review-avatar {
+    flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 800; font-size: 0.9rem; letter-spacing: 0.02em;
+}
+.df-review-author-meta { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.df-review-name { font-weight: 700; color: var(--df-navy); font-size: 0.92rem; }
+.df-review-verified {
+    display: inline-flex; align-items: center; gap: 0.3rem;
+    font-size: 0.76rem; color: var(--df-success); font-weight: 600;
+}
+.df-review-verified svg { width: 13px; height: 13px; flex: 0 0 auto; }
+
+/* ============================================================
    How-it-works step cards
    ============================================================ */
 .df-step-card {

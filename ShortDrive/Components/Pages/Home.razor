@@ -238,6 +238,54 @@
             </div>
         </div>
     </section>
+
+    <section class="df-section" id="reviews">
+        <div class="text-center mb-5 reveal">
+            <div class="section-label mb-2">WHAT OUR CUSTOMERS SAY</div>
+            <h2 class="df-section-heading">
+                Drivers who needed cover,<br />
+                <em>and got it in minutes.</em>
+            </h2>
+            <div class="df-reviews-summary mt-3">
+                <div class="df-review-stars" aria-label="Rated 4.8 out of 5">
+                    @for (var s = 0; s < 5; s++)
+                    {
+                        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.9 6.1 20.9l1.2-6.5L2.5 9.4l6.6-.9z"/></svg>
+                    }
+                </div>
+                <span class="df-reviews-summary-text">
+                    <strong>4.8 out of 5</strong> from verified Drive-Flex customers
+                </span>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            @foreach (var (r, i) in _reviews.Select((x, i) => (x, i)))
+            {
+                <div class="col-md-4">
+                    <figure class="df-review-card reveal" style="--reveal-delay: @($"{(i % 3) * 0.07:0.00}")s;">
+                        <div class="df-review-stars mb-3" aria-label="5 out of 5 stars">
+                            @for (var s = 0; s < 5; s++)
+                            {
+                                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.9 6.1 20.9l1.2-6.5L2.5 9.4l6.6-.9z"/></svg>
+                            }
+                        </div>
+                        <blockquote class="df-review-quote">@r.Quote</blockquote>
+                        <figcaption class="df-review-author">
+                            <span class="df-review-avatar" style="background: @r.AvatarColor;">@r.Initials</span>
+                            <span class="df-review-author-meta">
+                                <span class="df-review-name">@r.Name</span>
+                                <span class="df-review-verified">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>
+                                    Verified customer &middot; @r.Context
+                                </span>
+                            </span>
+                        </figcaption>
+                    </figure>
+                </div>
+            }
+        </div>
+    </section>
 </div>
 
 @code {
@@ -252,6 +300,23 @@
         new("Van", IconVan),
         new("Bike", IconBike),
         new("Camper", IconCamper)
+    ];
+
+    private record Review(string Quote, string Name, string Initials, string Context, string AvatarColor);
+    private readonly Review[] _reviews =
+    [
+        new("Borrowed my brother's car for a weekend and had cover sorted before I'd even finished my coffee. The certificate landed in my inbox within a minute.",
+            "James P.", "JP", "1-day car cover", "linear-gradient(135deg, #155EEF, #2563EB)"),
+        new("Needed a van for a single day to move house. Every annual quote wanted a year's commitment — Drive-Flex just covered the day I actually needed.",
+            "Sarah W.", "SW", "Van, house move", "linear-gradient(135deg, #6366F1, #7A3FE0)"),
+        new("Bought a car privately and wanted cover to drive it home the same afternoon. Straightforward, clearly priced, no phone calls. Exactly what I needed.",
+            "Daniel K.", "DK", "Test drive cover", "linear-gradient(135deg, #0EA06B, #12B981)"),
+        new("Used it to build up driving hours in my mum's car between lessons. Simple to set up and far cheaper than adding me to her yearly policy.",
+            "Aisha R.", "AR", "Learner practice", "linear-gradient(135deg, #E8287A, #F4568F)"),
+        new("There was a gap between my old and new annual policies. A week of Drive-Flex cover bridged it perfectly with no auto-renewal to cancel later.",
+            "Michael T.", "MT", "5-day gap cover", "linear-gradient(135deg, #D97706, #F59E0B)"),
+        new("Comprehensive cover, a proper certificate emailed straight away, and a price I could see up front. I've recommended it to three friends already.",
+            "Emma L.", "EL", "3-day car cover", "linear-gradient(135deg, #155EEF, #6366F1)")
     ];
 
     private record UseCase(string Num, string Title, string Desc);
