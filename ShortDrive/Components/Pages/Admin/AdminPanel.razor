@@ -112,6 +112,12 @@ else
                 </button>
             </li>
             <li class="nav-item">
+                <button class="nav-link rounded-pill @(_activeTab == "analytics" ? "active bg-dark" : "text-dark")"
+                        @onclick='() => _activeTab = "analytics"'>
+                    Analytics
+                </button>
+            </li>
+            <li class="nav-item">
                 <button class="nav-link rounded-pill @(_activeTab == "pages" ? "active bg-dark" : "text-dark")"
                         @onclick='() => _activeTab = "pages"'>
                     Content Pages
@@ -385,6 +391,33 @@ else
                 </div>
             </div>
         }
+        else if (_activeTab == "analytics" && _settings is not null)
+        {
+            <div class="p-4 bg-white rounded-4 border shadow-sm" style="max-width: 680px;">
+                <h5 class="fw-bold mb-3">Google Analytics</h5>
+                <p class="small text-muted">
+                    Paste your Google Analytics 4 Measurement ID to track visitors, ad traffic and policy sales,
+                    then click <strong>Save All Changes</strong>. Leave it blank to switch tracking off.
+                </p>
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Measurement ID</label>
+                    <input type="text" class="form-control font-monospace" style="max-width: 320px;"
+                           @bind="_settings.GoogleAnalyticsId" placeholder="G-XXXXXXXXXX" />
+                    <div class="form-text small">
+                        Find it in Google Analytics &rarr; Admin &rarr; Data streams &rarr; your website stream.
+                    </div>
+                </div>
+                @if (_analyticsError is not null)
+                {
+                    <div class="alert alert-danger py-2 small">@_analyticsError</div>
+                }
+                <div class="alert alert-info py-2 small mb-0">
+                    <strong>What gets tracked:</strong> page views, checkouts started (<code>begin_checkout</code>) and
+                    completed policy sales (<code>purchase</code>, with the premium as the value). Visitors see a cookie
+                    banner, and analytics cookies are only set after they click Accept.
+                </div>
+            </div>
+        }
         else if (_activeTab == "pages")
         {
             <div class="p-4 bg-white rounded-4 border shadow-sm" style="max-width: 840px;">
@@ -573,6 +606,8 @@ else
     private bool _smtpTesting; private bool _smtpTestOk; private string? _smtpTestResult;
     private string _smtpTestTo = "";
 
+    private string? _analyticsError;
+
     protected override async Task OnInitializedAsync()
     {
         // Authenticated within this circuit (arrived from the login page): load immediately.
@@ -647,8 +682,20 @@ else
     private async Task SaveSettingsAsync()
     {
         if (_settings is null) return;
-        _saving = true;
         _savedSuccess = false;
+
+        // The Measurement ID is rendered into a script on every page, so only accept a real tag ID.
+        _analyticsError = null;
+        var gaId = _settings.GoogleAnalyticsId?.Trim().ToUpperInvariant();
+        _settings.GoogleAnalyticsId = string.IsNullOrEmpty(gaId) ? null : gaId;
+        if (_settings.GoogleAnalyticsId is not null && !QuoteService.IsValidAnalyticsId(_settings.GoogleAnalyticsId))
+        {
+            _analyticsError = "That doesn't look like a Measurement ID — it should look like G-ABC123XYZ.";
+            _activeTab = "analytics";
+            return;
+        }
+
+        _saving = true;
 
         // Guard the pricing engine against invalid configuration.
         _settings.OneHourRate = Math.Max(0, _settings.OneHourRate);

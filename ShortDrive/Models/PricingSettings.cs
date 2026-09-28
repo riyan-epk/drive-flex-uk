@@ -53,5 +53,8 @@ public class PricingSettings
     public string? SmtpFromName { get; set; } = "Drive-Flex Insurance";
     public bool SmtpUseSsl { get; set; } = true;
 
+    // Google Analytics 4 Measurement ID (e.g. G-ABC123XYZ). Blank disables tracking and the cookie banner.
+    public string? GoogleAnalyticsId { get; set; }
+
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

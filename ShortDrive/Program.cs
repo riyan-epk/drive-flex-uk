@@ -75,6 +75,11 @@ using (var scope = app.Services.CreateScope())
         "ALTER TABLE \"PricingSettings\" ADD COLUMN \"StripeWebhookSecret\" TEXT;"); }
     catch { /* column already exists */ }
 
+    // Add GoogleAnalyticsId column if missing (safe no-op on fresh databases).
+    try { await db.Database.ExecuteSqlRawAsync(
+        "ALTER TABLE \"PricingSettings\" ADD COLUMN \"GoogleAnalyticsId\" TEXT;"); }
+    catch { /* column already exists */ }
+
     await SiteContent.SeedAsync(db);
 }
 

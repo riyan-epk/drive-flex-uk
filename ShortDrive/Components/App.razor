@@ -1,3 +1,5 @@
+@inject QuoteService QuoteSvc
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -57,12 +59,99 @@
     <link rel="stylesheet" href="@Assets["ShortDrive.styles.css"]" />
     <ImportMap />
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=2" />
+    @if (_analyticsId is not null)
+    {
+        @* Google Analytics 4 with Consent Mode v2. Everything defaults to "denied" (no cookies) until
+           the visitor accepts the cookie banner; the choice is remembered in the df_consent cookie. *@
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag() { dataLayer.push(arguments); }
+            (function () {
+                var m = document.cookie.match(/(?:^|; )df_consent=(granted|denied)/);
+                var state = m && m[1] === 'granted' ? 'granted' : 'denied';
+                gtag('consent', 'default', {
+                    ad_storage: state, ad_user_data: state, ad_personalization: state, analytics_storage: state
+                });
+            })();
+            gtag('set', 'ads_data_redaction', true);
+            gtag('js', new Date());
+            gtag('config', '@_analyticsId');
+        </script>
+        <script async src="https://www.googletagmanager.com/gtag/js?id=@_analyticsId"></script>
+    }
     <HeadOutlet />
 </head>
 
 <body>
     <Routes />
+    @if (_analyticsId is not null)
+    {
+        @* data-permanent keeps the banner (and its shown/hidden state) untouched by enhanced navigation. *@
+        <div id="dfCookieBanner" class="df-cookie" data-permanent="df-cookie-banner"
+             role="dialog" aria-labelledby="dfCookieTitle" hidden>
+            <div class="df-cookie-title" id="dfCookieTitle">Cookies on Drive-Flex</div>
+            <p>
+                We'd like to use analytics cookies to understand how people use our site and to measure our
+                adverts. They're only set if you accept. <a href="/privacy">Privacy Policy</a>
+            </p>
+            <div class="df-cookie-actions">
+                <button type="button" class="df-cookie-btn df-cookie-btn--ghost" onclick="dfSetConsent(false)">Reject</button>
+                <button type="button" class="df-cookie-btn df-cookie-btn--primary" onclick="dfSetConsent(true)">Accept</button>
+            </div>
+        </div>
+    }
     <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script>
+        // ── Analytics & cookie consent ─────────────────────────────────────────────
+        // All helpers are safe no-ops when Google Analytics is not configured in the admin panel.
+        function dfTrack(name, params) {
+            if (typeof window.gtag === 'function') window.gtag('event', name, params || {});
+        }
+        function dfConsentChoice() {
+            var m = document.cookie.match(/(?:^|; )df_consent=(granted|denied)/);
+            return m ? m[1] : null;
+        }
+        function dfShowCookieBanner() {
+            var b = document.getElementById('dfCookieBanner');
+            if (!b || !b.hidden) return;
+            b.hidden = false;
+            requestAnimationFrame(function () { requestAnimationFrame(function () { b.classList.add('show'); }); });
+        }
+        function dfHideCookieBanner() {
+            var b = document.getElementById('dfCookieBanner');
+            if (!b) return;
+            b.classList.remove('show');
+            setTimeout(function () { b.hidden = true; }, 300);
+        }
+        function dfSyncCookieBanner() {
+            if (!dfConsentChoice()) dfShowCookieBanner();
+        }
+        function dfSetConsent(granted) {
+            var v = granted ? 'granted' : 'denied';
+            document.cookie = 'df_consent=' + v + '; Max-Age=' + (60 * 60 * 24 * 180) + '; path=/; SameSite=Lax' +
+                (location.protocol === 'https:' ? '; Secure' : '');
+            if (typeof window.gtag === 'function') {
+                window.gtag('consent', 'update', {
+                    ad_storage: v, ad_user_data: v, ad_personalization: v, analytics_storage: v
+                });
+            }
+            if (!granted) {
+                // Withdrawing consent: remove any Google cookies set under a previous "Accept".
+                var root = location.hostname.replace(/^www\./, '');
+                document.cookie.split(';').forEach(function (c) {
+                    var name = c.split('=')[0].trim();
+                    if (!/^(_ga|_gid|_gcl)/.test(name)) return;
+                    ['', '; domain=' + location.hostname, '; domain=.' + root].forEach(function (d) {
+                        document.cookie = name + '=; Max-Age=0; path=/' + d;
+                    });
+                });
+            }
+            dfHideCookieBanner();
+        }
+        if (document.readyState !== 'loading') { dfSyncCookieBanner(); } else {
+            document.addEventListener('DOMContentLoaded', dfSyncCookieBanner);
+        }
+    </script>
     <script>
         // Mobile navigation toggle. The site header lives in a server-rendered (non-interactive)
         // layout, so the hamburger is driven by plain JS rather than a Blazor click handler.
@@ -94,12 +183,16 @@
         window.addEventListener('scroll', dfSyncHeader, { passive: true });
 
         // After every enhanced page navigation: scroll to top, close the mobile menu,
-        // and re-sync the header state.
+        // re-sync the header state, and record the page view. Enhanced navigation doesn't
+        // reload the page, so Google Analytics only sees the new page because we tell it here
+        // (after the new <title> is in place, so reports show the right page name).
         (function () {
             function onNav() {
                 window.scrollTo({ top: 0, left: 0 });
                 dfCloseMenu();
                 dfSyncHeader();
+                dfSyncCookieBanner();
+                dfTrack('page_view', { page_location: location.href, page_title: document.title });
             }
             function hook() {
                 if (window.Blazor && Blazor.addEventListener) {
@@ -119,3 +212,12 @@
 </body>
 
 </html>
+
+@code {
+    private string? _analyticsId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _analyticsId = await QuoteSvc.GetAnalyticsIdAsync();
+    }
+}

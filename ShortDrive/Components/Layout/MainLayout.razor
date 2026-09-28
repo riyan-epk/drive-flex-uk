@@ -1,5 +1,6 @@
 @inherits LayoutComponentBase
 @inject NavigationManager Nav
+@inject QuoteService QuoteSvc
 
 <div class="min-vh-100 d-flex flex-column" style="background-color: var(--df-bg);">
     <header class="df-navbar">
@@ -82,6 +83,10 @@
                     <ul class="df-footer-links">
                         <li><a href="/terms">Terms of Business</a></li>
                         <li><a href="/privacy">Privacy Policy</a></li>
+                        @if (_analyticsEnabled)
+                        {
+                            <li><button type="button" onclick="dfShowCookieBanner()">Cookie Settings</button></li>
+                        }
                         <li><a href="/contact">Contact Us</a></li>
                         <li><a href="/about">FCA Status</a></li>
                     </ul>
@@ -106,3 +111,13 @@
     </footer>
 </div>
 
+
+@code {
+    // Shows the footer "Cookie Settings" link only when Google Analytics (and so the banner) is on.
+    private bool _analyticsEnabled;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _analyticsEnabled = await QuoteSvc.GetAnalyticsIdAsync() is not null;
+    }
+}

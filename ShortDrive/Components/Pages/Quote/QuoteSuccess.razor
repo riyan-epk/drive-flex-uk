@@ -213,6 +213,38 @@
         }
     }
 
+    private bool _purchaseTracked;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_quote is null || _purchaseTracked) return;
+        _purchaseTracked = true;
+
+        // Google Analytics conversion. GA de-duplicates purchases by transaction_id, so a
+        // refresh of this page doesn't count the sale twice.
+        try
+        {
+            await JS.InvokeVoidAsync("dfTrack", "purchase", new
+            {
+                transaction_id = _quote.PolicyNumber ?? $"Q{_quote.Id}",
+                value = _quote.TotalPremium,
+                currency = "GBP",
+                items = new[]
+                {
+                    new
+                    {
+                        item_id = _quote.VehicleClass.ToLowerInvariant(),
+                        item_name = $"Temporary {_quote.VehicleClass} insurance",
+                        item_category = _quote.Usage,
+                        price = _quote.TotalPremium,
+                        quantity = 1
+                    }
+                }
+            });
+        }
+        catch { /* analytics must never break the certificate page */ }
+    }
+
     private async Task PrintCertificate()
     {
         await JS.InvokeVoidAsync("window.print");

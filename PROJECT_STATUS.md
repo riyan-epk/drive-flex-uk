@@ -4,9 +4,25 @@
 > been done, how it was verified, and what still remains. If the chat is deleted, read this
 > first — it tells you the full state so you can continue without re-discovering everything.
 >
-> **Last updated:** 2026-09-15
+> **Last updated:** 2026-09-28
 
 ---
+
+## SESSION UPDATE — 2026-09-28 (Google Analytics)
+
+**Google Analytics 4 is built in, and it's switched on from the admin panel** (Admin → **Analytics** tab → paste the
+`G-…` Measurement ID → Save All Changes; blank = off). Stored in `PricingSettings.GoogleAnalyticsId`
+(column auto-added at startup in `Program.cs`), read via cached `QuoteService.GetAnalyticsIdAsync`.
+- `App.razor` loads gtag.js with **Consent Mode v2**, everything `denied` until the visitor clicks Accept on
+  the cookie banner (choice kept in the `df_consent` cookie for 180 days; Reject deletes `_ga*`/`_gcl*` cookies).
+  Footer has a **Cookie Settings** link to change the choice. No banner/tag is output when the ID is blank.
+- Page views: the first load is sent by `gtag('config')`, and each Blazor enhanced navigation is sent by the
+  `enhancedload` hook with the correct title. **In GA → Data streams → Enhanced measurement, turn OFF
+  "Page changes based on browser history events"** or page views are double-counted.
+- Conversions: `begin_checkout` (QuoteWizard, before the Stripe redirect) and `purchase` (QuoteSuccess, with
+  value/GBP, transaction_id = policy number). Mark `purchase` as a key event in GA and import it into Google Ads.
+- Privacy page: the default seed now has a "Cookies and analytics" section. **Existing live DBs need it
+  pasted in via Admin → Content Pages → /privacy.**
 
 ## SESSION UPDATE — 2026-09-15 (deployment + fixes)
 

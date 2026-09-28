@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using ShortDrive.Data;
 using ShortDrive.Models;
 
@@ -88,13 +90,39 @@ public class QuoteResult
 
 public class QuoteService
 {
+    private const string AnalyticsIdCacheKey = "df:analytics-id";
+
     private readonly AppDbContext _db;
     private readonly ILogger<QuoteService> _logger;
+    private readonly IMemoryCache _cache;
 
-    public QuoteService(AppDbContext db, ILogger<QuoteService> logger)
+    public QuoteService(AppDbContext db, ILogger<QuoteService> logger, IMemoryCache cache)
     {
         _db = db;
         _logger = logger;
+        _cache = cache;
+    }
+
+    /// <summary>
+    /// True for a Google tag ID such as G-ABC123XYZ (GA4), GT-… or AW-…. The ID is written into an
+    /// inline script on every page, so anything else is rejected rather than rendered.
+    /// </summary>
+    public static bool IsValidAnalyticsId(string? id) =>
+        id is not null && Regex.IsMatch(id, "^(G|GT|AW)-[A-Z0-9]{4,20}$");
+
+    /// <summary>
+    /// The configured Google Analytics ID, or null when tracking is off. Read on every page render,
+    /// so it is cached and invalidated when the admin saves settings.
+    /// </summary>
+    public async Task<string?> GetAnalyticsIdAsync(CancellationToken ct = default)
+    {
+        if (_cache.TryGetValue(AnalyticsIdCacheKey, out string? cached))
+            return cached;
+
+        var id = await _db.PricingSettings.Select(s => s.GoogleAnalyticsId).FirstOrDefaultAsync(ct);
+        id = IsValidAnalyticsId(id) ? id : null;
+        _cache.Set(AnalyticsIdCacheKey, id, TimeSpan.FromMinutes(10));
+        return id;
     }
 
     public async Task<PricingSettings> GetPricingSettingsAsync(CancellationToken ct = default)
@@ -146,6 +174,10 @@ public class QuoteService
         existing.SmtpFromEmail = updated.SmtpFromEmail;
         existing.SmtpFromName = updated.SmtpFromName;
         existing.SmtpUseSsl = updated.SmtpUseSsl;
+
+        // Google Analytics
+        existing.GoogleAnalyticsId = updated.GoogleAnalyticsId;
+        _cache.Remove(AnalyticsIdCacheKey);
 
         // Admin password hash (persists password changes to the store)
         existing.AdminPasswordHash = updated.AdminPasswordHash;

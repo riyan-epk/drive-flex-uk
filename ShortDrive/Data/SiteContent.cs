@@ -68,6 +68,12 @@ public static class SiteContent
             <p>We share information only as needed with our underwriter, the MID, payment processors and where
             required by law. We do not sell your personal data.</p>
 
+            <h2>Cookies and analytics</h2>
+            <p>With your consent, we use Google Analytics cookies to understand how visitors use our website and
+            to measure the performance of our advertising. These cookies are only set if you click "Accept" on
+            our cookie banner, and you can change your choice at any time using the "Cookie Settings" link in
+            the footer. We also set one small cookie to remember your choice.</p>
+
             <h2>Your rights</h2>
             <p>You have the right to access, correct or request deletion of your personal data. To exercise these
             rights, contact us at <a href="mailto:supportdriveflex@gmail.com">supportdriveflex@gmail.com</a>.</p>

@@ -787,6 +787,17 @@
                 _vehicle.Registration,
                 _customerEmail);
 
+            // Google Analytics funnel step (sent via beacon, so it survives the redirect to Stripe).
+            try
+            {
+                await JS.InvokeVoidAsync("dfTrack", "begin_checkout", new
+                {
+                    currency = "GBP",
+                    value = _latestQuote.TotalPremium
+                });
+            }
+            catch { /* analytics must never block checkout */ }
+
             Nav.NavigateTo(stripeUrl, forceLoad: true);
         }
         catch
