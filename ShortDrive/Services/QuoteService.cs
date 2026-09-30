@@ -174,6 +174,8 @@ public class QuoteService
         existing.SmtpFromEmail = updated.SmtpFromEmail;
         existing.SmtpFromName = updated.SmtpFromName;
         existing.SmtpUseSsl = updated.SmtpUseSsl;
+        existing.OwnerNotifyEmail = string.IsNullOrWhiteSpace(updated.OwnerNotifyEmail)
+            ? null : updated.OwnerNotifyEmail.Trim();
 
         // Google Analytics
         existing.GoogleAnalyticsId = updated.GoogleAnalyticsId;

@@ -80,6 +80,11 @@ using (var scope = app.Services.CreateScope())
         "ALTER TABLE \"PricingSettings\" ADD COLUMN \"GoogleAnalyticsId\" TEXT;"); }
     catch { /* column already exists */ }
 
+    // Add OwnerNotifyEmail column if missing (safe no-op on fresh databases).
+    try { await db.Database.ExecuteSqlRawAsync(
+        "ALTER TABLE \"PricingSettings\" ADD COLUMN \"OwnerNotifyEmail\" TEXT;"); }
+    catch { /* column already exists */ }
+
     await SiteContent.SeedAsync(db);
 }
 
@@ -183,6 +188,16 @@ app.MapPost("/webhook/stripe", async (HttpContext context) =>
                     {
                         logger.LogError(ex, "Webhook: failed to send certificate email for quote {QuoteId}", quote.Id);
                     }
+                }
+
+                try
+                {
+                    var emailSvc = scope.ServiceProvider.GetRequiredService<IEmailSender>();
+                    await emailSvc.SendOwnerSaleNotificationAsync(quote);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Webhook: failed to send owner sale notification for quote {QuoteId}", quote.Id);
                 }
             }
         }

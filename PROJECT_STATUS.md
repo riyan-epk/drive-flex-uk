@@ -4,9 +4,23 @@
 > been done, how it was verified, and what still remains. If the chat is deleted, read this
 > first — it tells you the full state so you can continue without re-discovering everything.
 >
-> **Last updated:** 2026-09-28
+> **Last updated:** 2026-09-30
 
 ---
+
+## SESSION UPDATE — 2026-09-30 (owner "new sale" email)
+
+**Every paid policy now also emails the owner** (amount, customer name + email, policy no., vehicle, cover
+period, paid-at time). Turn on in Admin → **Email** tab → "New sale alerts — send to (owner email)" → Save
+(blank = off). Stored in `PricingSettings.OwnerNotifyEmail` (column auto-added at startup in `Program.cs`).
+- `IEmailSender.SendOwnerSaleNotificationAsync` is called exactly where a quote first becomes Purchased:
+  the Stripe webhook and `QuoteSuccess.razor` (not on "Resend email", not when the page is refreshed).
+- Subject is prefixed `[TEST]` while the Stripe secret key is `sk_test_…`. Reply-To is the customer.
+- SMTP settings resolution in `SmtpEmailSender` is now shared (`ResolveSmtp`) by both emails.
+- Verified locally: fake webhook event → certificate to customer + sale alert to owner, both captured
+  by a local SMTP sink; customer-typed name is HTML-encoded in the alert.
+- **No EF migrations exist in this project** — never run `dotnet ef migrations add` on the server. New
+  columns/tables are added automatically at app start (`Program.cs`), so a normal redeploy is enough.
 
 ## SESSION UPDATE — 2026-09-28 (Google Analytics)
 

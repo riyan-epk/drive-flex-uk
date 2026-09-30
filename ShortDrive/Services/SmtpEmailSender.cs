@@ -19,22 +19,43 @@ public class SmtpEmailSender : IEmailSender
         _logger = logger;
     }
 
+    private sealed record SmtpConfig(
+        string? Host, int Port, string? User, string? Pass, string FromEmail, string FromName, bool UseSsl)
+    {
+        public bool IsConfigured => !string.IsNullOrWhiteSpace(Host) && !string.IsNullOrWhiteSpace(User);
+
+        public SmtpClient CreateClient() => new(Host, Port)
+        {
+            Credentials = new NetworkCredential(User, Pass),
+            EnableSsl = UseSsl
+        };
+    }
+
+    // Admin-panel settings take precedence over appsettings.json.
+    private SmtpConfig ResolveSmtp(PricingSettings? settings)
+    {
+        var configPort = int.TryParse(_config["Smtp:Port"], out var p) ? p : 587;
+        return new SmtpConfig(
+            settings?.SmtpHost ?? _config["Smtp:Host"],
+            settings?.SmtpPort > 0 ? settings.SmtpPort : configPort,
+            settings?.SmtpUsername ?? _config["Smtp:Username"],
+            settings?.SmtpPassword ?? _config["Smtp:Password"],
+            settings?.SmtpFromEmail ?? _config["Smtp:FromEmail"] ?? "noreply@drive-flex.co.uk",
+            settings?.SmtpFromName ?? _config["Smtp:FromName"] ?? "Drive-Flex Insurance",
+            settings?.SmtpUseSsl ?? true);
+    }
+
     public async Task SendCertificateEmailAsync(Quote quote, string toEmail, CancellationToken ct = default)
     {
         using var scope = _sp.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var settings = await db.PricingSettings.FirstOrDefaultAsync(ct);
 
-        var host = settings?.SmtpHost ?? _config["Smtp:Host"];
-        var configPort = int.TryParse(_config["Smtp:Port"], out var p) ? p : 587;
-        var port = settings?.SmtpPort > 0 ? settings.SmtpPort : configPort;
-        var user = settings?.SmtpUsername ?? _config["Smtp:Username"];
-        var pass = settings?.SmtpPassword ?? _config["Smtp:Password"];
-        var fromEmail = settings?.SmtpFromEmail ?? _config["Smtp:FromEmail"] ?? "noreply@drive-flex.co.uk";
-        var fromName = settings?.SmtpFromName ?? _config["Smtp:FromName"] ?? "Drive-Flex Insurance";
-        var useSsl = settings?.SmtpUseSsl ?? true;
+        var smtp = ResolveSmtp(settings);
+        var fromEmail = smtp.FromEmail;
+        var fromName = smtp.FromName;
 
-        if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(user))
+        if (!smtp.IsConfigured)
         {
             _logger.LogWarning("SMTP not configured — falling back to log-only for {Email}", toEmail);
             LogCertificate(quote, toEmail);
@@ -108,11 +129,7 @@ public class SmtpEmailSender : IEmailSender
 
         try
         {
-            using var client = new SmtpClient(host, port)
-            {
-                Credentials = new NetworkCredential(user, pass),
-                EnableSsl = useSsl
-            };
+            using var client = smtp.CreateClient();
 
             var plainText =
                 $"""
@@ -156,6 +173,101 @@ public class SmtpEmailSender : IEmailSender
         {
             _logger.LogError(ex, "Failed to send certificate email to {Email} for policy {Policy}", toEmail, quote.PolicyNumber);
             LogCertificate(quote, toEmail);
+        }
+    }
+
+    public async Task SendOwnerSaleNotificationAsync(Quote quote, CancellationToken ct = default)
+    {
+        using var scope = _sp.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var settings = await db.PricingSettings.FirstOrDefaultAsync(ct);
+
+        var ownerEmail = settings?.OwnerNotifyEmail;
+        if (string.IsNullOrWhiteSpace(ownerEmail))
+            return;
+
+        var smtp = ResolveSmtp(settings);
+        var customerName = $"{quote.Driver?.FirstName} {quote.Driver?.LastName}".Trim();
+        var customerEmail = string.IsNullOrWhiteSpace(quote.CustomerEmail) ? "(not given)" : quote.CustomerEmail;
+        var amount = $"£{quote.TotalPremium:0.00}";
+        var policy = quote.PolicyNumber ?? $"Q{quote.Id}";
+
+        if (!smtp.IsConfigured)
+        {
+            _logger.LogInformation(
+                "[OWNER SALE ALERT - LOGGED ONLY] Policy {Policy}: {Amount} from {Name} <{Email}>",
+                policy, amount, customerName, customerEmail);
+            return;
+        }
+
+        var vehicle = $"{quote.Vehicle?.Make} {quote.Vehicle?.Model} ({quote.Vehicle?.Registration})";
+        var coverStart = UkTime.FromUtc(quote.CoverStartUtc);
+        var coverEnd = UkTime.FromUtc(quote.CoverStartUtc.AddHours(quote.DurationHours));
+        var cover = $"{quote.VehicleClass}, {quote.Usage} — {coverStart:dd MMM yyyy HH:mm} to {coverEnd:dd MMM yyyy HH:mm}";
+        var paidAt = UkTime.FromUtc(quote.CertificateIssuedAt ?? DateTime.UtcNow);
+
+        // Flag Stripe test-mode payments so a test purchase isn't mistaken for real money.
+        var secretKey = !string.IsNullOrWhiteSpace(settings?.StripeSecretKey)
+            ? settings.StripeSecretKey
+            : _config["Stripe:SecretKey"];
+        var testTag = secretKey?.StartsWith("sk_test_") == true ? "[TEST] " : "";
+
+        // Customer-typed values are HTML-encoded before going into the email body.
+        static string Row(string label, string value, string style = "") =>
+            "<tr style=\"border-bottom: 1px solid #E2E8F0;\">" +
+            $"<td style=\"padding: 8px 0; color: #64748B; width: 40%;\">{label}</td>" +
+            $"<td style=\"padding: 8px 0; {style}\">{WebUtility.HtmlEncode(value)}</td></tr>";
+
+        var html = $"""
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+                <h2 style="color: #059669; font-size: 20px; margin: 0 0 4px 0;">{testTag}New policy sold — {amount}</h2>
+                <p style="color: #64748B; font-size: 13px; margin: 0 0 16px 0;">A customer has just paid on Drive-Flex.</p>
+                <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                    {Row("Amount paid", amount, "font-weight: 700; color: #059669;")}
+                    {Row("Customer name", customerName, "font-weight: 600;")}
+                    {Row("Customer email", customerEmail, "font-weight: 600;")}
+                    {Row("Policy number", policy)}
+                    {Row("Vehicle", vehicle)}
+                    {Row("Cover", cover)}
+                    {Row("Paid at", $"{paidAt:dd MMM yyyy HH:mm} (UK time)")}
+                </table>
+            </div>
+            """;
+
+        var plainText =
+            $"""
+            {testTag}New policy sold — {amount}
+
+            Amount paid:    {amount}
+            Customer name:  {customerName}
+            Customer email: {customerEmail}
+            Policy number:  {policy}
+            Vehicle:        {vehicle}
+            Cover:          {cover}
+            Paid at:        {paidAt:dd MMM yyyy HH:mm} (UK time)
+            """;
+
+        try
+        {
+            using var client = smtp.CreateClient();
+            var msg = new MailMessage
+            {
+                From = new MailAddress(smtp.FromEmail, smtp.FromName),
+                Subject = $"{testTag}New sale: {amount} — {customerName} ({policy})"
+            };
+            msg.To.Add(ownerEmail);
+            // Hitting Reply goes straight to the customer.
+            if (MailAddress.TryCreate(quote.CustomerEmail, customerName, out var replyTo))
+                msg.ReplyToList.Add(replyTo);
+            msg.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(plainText, null, "text/plain"));
+            msg.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(html, null, "text/html"));
+
+            await client.SendMailAsync(msg, ct);
+            _logger.LogInformation("Owner sale alert sent to {Owner} for policy {Policy}", ownerEmail, policy);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send owner sale alert for policy {Policy}", policy);
         }
     }
 

@@ -53,6 +53,9 @@ public class PricingSettings
     public string? SmtpFromName { get; set; } = "Drive-Flex Insurance";
     public bool SmtpUseSsl { get; set; } = true;
 
+    // Where "new sale" notifications go (the business owner). Blank disables them.
+    public string? OwnerNotifyEmail { get; set; }
+
     // Google Analytics 4 Measurement ID (e.g. G-ABC123XYZ). Blank disables tracking and the cookie banner.
     public string? GoogleAnalyticsId { get; set; }
 
