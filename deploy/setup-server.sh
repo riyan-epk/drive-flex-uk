@@ -116,6 +116,16 @@ server {
     }
 }
 EOF
+# Speed settings (HTTP/2 + gzip) — same content as deploy/nginx-performance.conf.
+cat >/etc/nginx/conf.d/driveflex-performance.conf <<'EOF'
+http2 on;
+gzip on;
+gzip_comp_level 5;
+gzip_min_length 1024;
+gzip_proxied any;
+gzip_vary on;
+gzip_types text/plain text/css text/xml text/javascript application/javascript application/json application/xml application/manifest+json image/svg+xml;
+EOF
 nginx -t
 systemctl enable --now nginx
 systemctl restart nginx

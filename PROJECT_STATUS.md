@@ -4,9 +4,26 @@
 > been done, how it was verified, and what still remains. If the chat is deleted, read this
 > first — it tells you the full state so you can continue without re-discovering everything.
 >
-> **Last updated:** 2026-09-30
+> **Last updated:** 2026-10-01
 
 ---
+
+## SESSION UPDATE — 2026-10-01 (site speed)
+
+Measured the live site: nothing was compressed (Bootstrap 233 KB, blazor.web.js 188 KB, HTML 44 KB sent raw),
+nothing was cached by browsers, first paint waited on Google Fonts (~1.6 s), Nginx served HTTP/1.1 only, and the
+homepage opened a Blazor Server circuit just for the quote widget (dead until the circuit connected). Fixes:
+- `Program.cs`: `app.UseStaticFiles()` → `app.MapStaticAssets()`. Publish now pre-compresses wwwroot (Brotli/gzip;
+  Bootstrap 233 KB → 23 KB) and `@Assets[...]` URLs are fingerprinted with `Cache-Control: max-age=31536000, immutable`.
+  Use `@Assets["..."]` for any new wwwroot image/CSS/JS reference so it gets this caching.
+- Fonts are self-hosted in `wwwroot/fonts/` (Inter variable + DM Serif Display regular/italic, latin subset, OFL),
+  preloaded, with `@font-face` inline in `App.razor`. No more fonts.googleapis.com / gstatic requests.
+  (Don't use the `rel=preload onload=` font trick: Blazor enhanced nav re-syncs `<head>` attributes and undoes it.)
+- `Home.razor` is now static SSR (no `@rendermode`): the quote widget is a plain `GET /quote?class=..&reg=..` form
+  (`data-enhance`), vehicle tabs are radio inputs styled via `.df-tab-btn:has(input:checked)`. The wizard already
+  normalises the plate and auto-looks it up. Homepage no longer opens a SignalR connection.
+- `deploy/nginx-performance.conf` → `/etc/nginx/conf.d/driveflex-performance.conf`: `http2 on` + gzip (HTML and
+  blazor.web.js, which .NET 9 serves uncompressed). `setup-server.sh` installs it for new servers.
 
 ## SESSION UPDATE — 2026-09-30 (owner "new sale" email)
 
@@ -267,3 +284,6 @@ Admin panel: `/admin` (login `/admin/login`). Dev password: `DriveFlex2024!`.
 - All pricing must go through `QuoteService.ComputePremium` — never duplicate pricing math in Razor.
 - Never commit `appsettings.Development.json` (it holds real DVSA/Stripe/admin secrets).
 - Cover times are UK-local for display/entry, stored as UTC — use `UkTime` helpers.
+- Static files are served by `MapStaticAssets()` (compressed + fingerprinted). Reference wwwroot files via
+  `@Assets["path"]`; don't switch back to `UseStaticFiles()` or add Google-hosted fonts/CSS (render-blocking).
+- `Home.razor` is static SSR on purpose (fast first click). Don't add `@rendermode` back for small widgets.

@@ -109,9 +109,12 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseStaticFiles();
 app.UseRateLimiter();
 app.UseAntiforgery();
+
+// Serves wwwroot with build-time Brotli/gzip compression, and with fingerprinted URLs (from
+// @Assets[...]) that browsers cache for a year — repeat visits re-download no CSS/JS/images.
+app.MapStaticAssets();
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();

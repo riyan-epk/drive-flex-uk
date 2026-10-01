@@ -400,9 +400,11 @@ main { animation: df-fade-in-up 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
     display: inline-flex; align-items: center; justify-content: center; gap: 0.35rem;
 }
 .df-tab-btn svg { width: 18px; height: 18px; }
-.df-tab-btn:hover:not(.active) { color: var(--df-navy); background: rgba(255,255,255,0.9); box-shadow: var(--df-shadow-xs); transform: translateY(-1px); }
-.df-tab-btn.active { background: var(--df-grad-primary); color: #ffffff; box-shadow: 0 4px 12px rgba(21,94,239,0.34); }
-.df-tab-btn.active:hover { filter: brightness(1.04); color: #fff; }
+/* A tab is "active" via the .active class or, for the homepage radio-button tabs, a checked input. */
+.df-tab-btn:hover:not(.active):not(:has(input:checked)) { color: var(--df-navy); background: rgba(255,255,255,0.9); box-shadow: var(--df-shadow-xs); transform: translateY(-1px); }
+.df-tab-btn.active, .df-tab-btn:has(input:checked) { background: var(--df-grad-primary); color: #ffffff; box-shadow: 0 4px 12px rgba(21,94,239,0.34); }
+.df-tab-btn.active:hover, .df-tab-btn:has(input:checked):hover { filter: brightness(1.04); color: #fff; }
+.df-tab-btn:has(input:focus-visible) { outline: 2px solid var(--df-primary); outline-offset: 2px; }
 
 /* UK number plate input */
 .uk-number-plate {

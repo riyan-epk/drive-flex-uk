@@ -124,6 +124,13 @@ Certbot gets a Let's Encrypt certificate, edits Nginx to serve HTTPS, and forces
 `http → https`. Visit **https://yourdomain.com** — you should see the padlock. It
 auto-renews (a timer is installed).
 
+**Speed settings (HTTP/2 + compression).** `setup-server.sh` already installs these. On a server set
+up before they existed, install them once:
+
+```bash
+cp /root/drive-flex-uk/deploy/nginx-performance.conf /etc/nginx/conf.d/driveflex-performance.conf && nginx -t && systemctl reload nginx
+```
+
 ---
 
 ## STEP 6 — Set your secrets + Gmail email
