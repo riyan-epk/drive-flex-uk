@@ -109,6 +109,10 @@
             </div>
         </div>
     </footer>
+
+    @* Connection-lost dialog. Stays hidden during the short reconnect that follows switching
+       tab or app; it only appears if the connection is still down after a few seconds. *@
+    <ReconnectModal />
 </div>
 
 

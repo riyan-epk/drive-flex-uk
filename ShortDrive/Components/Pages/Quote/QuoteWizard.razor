@@ -8,6 +8,7 @@
 @inject VehicleLookupRateLimiter RateLimiter
 @inject IHttpContextAccessor HttpCtx
 @inject IJSRuntime JS
+@implements IAsyncDisposable
 
 <SeoHead Title="Get an Instant Temporary Insurance Quote | Drive-Flex"
          Description="Enter your registration for an instant temporary motor insurance quote. Comprehensive cover for cars, vans, bikes and campers from 1 hour to 28 days. No auto-renewal — pay only for what you need."
@@ -80,6 +81,11 @@
                    @bind:event="oninput"
                    @onkeydown="OnRegKeyDown"
                    maxlength="10"
+                   enterkeyhint="search"
+                   autocomplete="off"
+                   autocorrect="off"
+                   autocapitalize="characters"
+                   spellcheck="false"
                    aria-label="Vehicle Registration Plate" />
         </div>
 
@@ -574,22 +580,83 @@
         if (!string.IsNullOrWhiteSpace(QueryClass))
             _cover.VehicleClass = QueryClass;
 
-        // Show the plate immediately in the prerendered HTML; the actual lookup is deferred to
-        // the first interactive render (below) so it runs exactly once instead of during both
-        // prerender and hydration.
+        // Show the plate immediately in the prerendered HTML. The lookup result is applied on the
+        // first interactive render (below), but the DVSA request itself is started right here,
+        // while the page is still being sent to the browser, so the answer is usually already
+        // waiting when the live connection comes up instead of only starting then.
         if (!string.IsNullOrWhiteSpace(QueryReg))
+        {
             _regInput = QueryReg;
+
+            if (!RendererInfo.IsInteractive)
+            {
+                var clean = QueryReg.Trim().Replace(" ", "").ToUpperInvariant();
+                if (Dvsa.IsValidRegistration(clean)
+                    && (Dvsa.IsLookupCached(clean) || RateLimiter.IsAllowed(_clientKey)))
+                {
+                    Dvsa.WarmLookup(clean);
+                }
+            }
+        }
     }
 
     private bool _autoLookupDone;
+    private DotNetObjectReference<QuoteWizard>? _selfRef;
+    private bool _historyReady;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender && !_autoLookupDone && !string.IsNullOrWhiteSpace(QueryReg) && _vehicle is null)
+        if (!firstRender) return;
+
+        // Hook the browser's Back/Forward buttons up to the wizard steps.
+        try
+        {
+            _selfRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("dfWizard.init", _selfRef);
+            _historyReady = true;
+        }
+        catch
+        {
+            // JS unavailable: the on-page Back button still works without browser history.
+        }
+
+        if (!_autoLookupDone && !string.IsNullOrWhiteSpace(QueryReg) && _vehicle is null)
         {
             _autoLookupDone = true;
             await LookupVehicleAsync();
             StateHasChanged();
         }
+    }
+
+    /// <summary>
+    /// Called from JS when the visitor uses the browser/phone Back or Forward button. Moves the
+    /// wizard to that step when it is one the visitor has already reached, and returns the step
+    /// actually shown so the address bar can be kept in line with it.
+    /// </summary>
+    [JSInvokable]
+    public int OnHistoryStep(int step)
+    {
+        if (step < 1) step = 1;
+        if (step != _step && step <= _maxStepReached && (step == 1 || _vehicle is not null))
+        {
+            _step = step;
+            _paymentError = null;
+            StateHasChanged();
+        }
+        return _step;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_historyReady) await JS.InvokeVoidAsync("dfWizard.dispose");
+        }
+        catch
+        {
+            // Circuit already gone: nothing to clean up in the browser.
+        }
+        _selfRef?.Dispose();
     }
 
     // Uses the same central pricing engine as the persisted quote so the live estimate
@@ -600,11 +667,10 @@
     private string CurrentExcessLabel =>
         QuoteService.ComputePremium(_cover, _driver, _pricingSettings ?? new PricingSettings()).ExcessLabel;
 
-    private void OnRegKeyDown(KeyboardEventArgs e)
-    {
-        if (e.Key == "Enter")
-            _ = LookupVehicleAsync();
-    }
+    // Returns the lookup task so the page re-renders when the result arrives. (Discarding it left
+    // the "Connecting to DVLA..." spinner on screen until the visitor touched something else.)
+    private Task OnRegKeyDown(KeyboardEventArgs e) =>
+        e.Key == "Enter" ? LookupVehicleAsync() : Task.CompletedTask;
 
     // Keyboard activation for the clickable choice/add-on cards (Enter or Space).
     private static void SelectOnKey(KeyboardEventArgs e, Action action)
@@ -630,13 +696,18 @@
             return;
         }
 
-        if (!RateLimiter.IsAllowed(_clientKey))
+        // A plate that is already cached (or being fetched) costs no DVSA call, so it does not
+        // count towards the lookup limit.
+        if (!Dvsa.IsLookupCached(clean) && !RateLimiter.IsAllowed(_clientKey))
         {
             _lookupError = "Too many lookups. Please wait a minute and try again.";
             return;
         }
 
         _isSearching = true;
+
+        // Close the on-screen keyboard so the result is not hidden behind it.
+        try { _ = JS.InvokeVoidAsync("dfHideKeyboard"); } catch { /* not interactive yet */ }
         try
         {
             _vehicle = await Dvsa.LookupVehicleAsync(clean);
@@ -684,6 +755,8 @@
         if (_step < 5)
         {
             _step++;
+            if (_step > _maxStepReached) _maxStepReached = _step;
+            await PushHistoryAsync();
             await ScrollToTopAsync();
         }
     }
@@ -691,10 +764,42 @@
     private async Task GoBack()
     {
         _paymentError = null;
-        if (_step > 1)
+        if (_step <= 1) return;
+
+        // Go back through the browser history so the on-page Back button and the phone's Back
+        // button stay in step with each other; OnHistoryStep then changes the step.
+        if (_historyReady)
         {
-            _step--;
-            await ScrollToTopAsync();
+            try
+            {
+                await JS.InvokeVoidAsync("dfWizard.back");
+                return;
+            }
+            catch
+            {
+                // Fall through to changing the step directly.
+            }
+        }
+
+        _step--;
+        await ScrollToTopAsync();
+    }
+
+    // Highest step reached so far; the browser Forward button may not skip past it.
+    private int _maxStepReached = 1;
+
+    // Records the current step as a browser history entry (/quote#step-3), so the phone's Back
+    // button returns to the previous step instead of leaving the quote.
+    private async Task PushHistoryAsync()
+    {
+        if (!_historyReady) return;
+        try
+        {
+            await JS.InvokeVoidAsync("dfWizard.push", _step);
+        }
+        catch
+        {
+            // History is a convenience only.
         }
     }
 
@@ -770,6 +875,7 @@
         {
             _paymentError = error;
             _step = 4; // send the user back to the step where they can fix it
+            await PushHistoryAsync();
             return;
         }
 

@@ -155,6 +155,32 @@ public class DvsaClient
         return !string.IsNullOrWhiteSpace(clean) && clean.Length <= 8 && RegPlateRegex.IsMatch(clean);
     }
 
+    private static string VehicleCacheKey(string clean) => $"dvsa:vehicle:{clean}";
+
+    /// <summary>True when a lookup for this plate is already cached or in flight (costs no DVSA call).</summary>
+    public bool IsLookupCached(string registration)
+    {
+        var clean = registration.Replace(" ", "").ToUpperInvariant();
+        return _cache.TryGetValue(VehicleCacheKey(clean), out Task<VehicleDto?>? t)
+            && t is not null && !t.IsFaulted && !t.IsCanceled;
+    }
+
+    /// <summary>
+    /// Starts a lookup in the background without waiting for it. The quote page calls this while
+    /// its HTML is still being generated, so the DVSA answer is usually already waiting by the
+    /// time the visitor's live connection is up.
+    /// </summary>
+    public void WarmLookup(string registration)
+    {
+        if (!IsValidRegistration(registration)) return;
+        _ = LookupVehicleAsync(registration).ContinueWith(
+            t => _ = t.Exception, TaskContinuationOptions.OnlyOnFaulted);
+    }
+
+    /// <summary>
+    /// Looks a vehicle up, sharing one DVSA request between simultaneous callers and remembering
+    /// the answer for a few minutes. Failed lookups are never cached.
+    /// </summary>
     public async Task<VehicleDto?> LookupVehicleAsync(string registration, CancellationToken ct = default)
     {
         var clean = registration.Replace(" ", "").ToUpperInvariant();
@@ -162,6 +188,22 @@ public class DvsaClient
         if (!IsValidRegistration(clean))
             throw new ArgumentException("Invalid UK registration plate format.");
 
+        var key = VehicleCacheKey(clean);
+        if (!_cache.TryGetValue(key, out Task<VehicleDto?>? task) || task is null || task.IsFaulted || task.IsCanceled)
+        {
+            // Not tied to the caller's cancellation token: the request is shared between callers.
+            task = FetchVehicleAsync(clean, CancellationToken.None);
+            _ = _cache.Set(key, task, TimeSpan.FromMinutes(10));
+            var cache = _cache;
+            var cleanup = task.ContinueWith(t => { var ignored = t.Exception; cache.Remove(key); },
+                TaskContinuationOptions.NotOnRanToCompletion);
+        }
+
+        return await task;
+    }
+
+    private async Task<VehicleDto?> FetchVehicleAsync(string clean, CancellationToken ct)
+    {
         if (clean == "AB12CDE")
         {
             return new VehicleDto

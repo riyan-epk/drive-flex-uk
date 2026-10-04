@@ -287,3 +287,12 @@ Admin panel: `/admin` (login `/admin/login`). Dev password: `DriveFlex2024!`.
 - Static files are served by `MapStaticAssets()` (compressed + fingerprinted). Reference wwwroot files via
   `@Assets["path"]`; don't switch back to `UseStaticFiles()` or add Google-hosted fonts/CSS (render-blocking).
 - `Home.razor` is static SSR on purpose (fast first click). Don't add `@rendermode` back for small widgets.
+- Quote wizard steps live in the browser history (`/quote#step-3`) via the `dfWizard` JS helper in
+  `App.razor`, so the phone's Back button goes one step back. Its `popstate` listener is registered
+  BEFORE `blazor.web.js` on purpose (it must run first, or Blazor re-downloads the page on every step back).
+- Vehicle lookups are shared + cached for 10 minutes in `DvsaClient.LookupVehicleAsync`, and the quote
+  page starts the lookup during prerender (`WarmLookup`) so the result is ready when the live connection is.
+- `<ReconnectModal />` is rendered from `MainLayout`. It stays hidden for the first 4 seconds of a
+  reconnect (tab/app switching on phones); disconnected sessions are kept for 30 minutes (`Program.cs`).
+- Multi-day prices are a sliding scale between the admin tiers (1 day / 7 days / 28 days), NOT
+  days × the 1-day rate: e.g. 1 day £26.50 and 7 days £58.50 gives 3 days = 26.50 + 2 × (58.50 − 26.50)/6 = £37.17.

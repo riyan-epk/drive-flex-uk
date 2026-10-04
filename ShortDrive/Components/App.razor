@@ -120,6 +120,13 @@
             </div>
         </div>
     }
+    <script>
+        // Must be registered before Blazor's script loads so it runs first: lets the quote wizard
+        // handle the Back/Forward buttons for its own steps (see dfWizard below).
+        window.addEventListener('popstate', function (e) {
+            if (window.dfWizard) window.dfWizard.onPop(e);
+        }, true);
+    </script>
     <script src="@Assets["_framework/blazor.web.js"]"></script>
     <script>
         // ── Analytics & cookie consent ─────────────────────────────────────────────
@@ -227,6 +234,111 @@
             if (!hook()) {
                 document.addEventListener('DOMContentLoaded', hook);
             }
+        })();
+    </script>
+    <script>
+        // ── On-screen keyboard (registration plate box) ────────────────────────────
+        // Closes the phone keyboard. Called when a lookup starts so the result is visible.
+        function dfHideKeyboard() {
+            var el = document.activeElement;
+            if (el && /^(INPUT|TEXTAREA)$/.test(el.tagName) && el.blur) el.blur();
+        }
+        (function () {
+            var plate = null;      // the plate box that currently has (or last had) focus
+            var blurredAt = 0;     // when it lost focus through a real blur (0 = still focused)
+
+            function isPlate(el) { return !!(el && el.classList && el.classList.contains('uk-plate-input')); }
+
+            document.addEventListener('focusin', function (e) {
+                if (isPlate(e.target)) { plate = e.target; blurredAt = 0; }
+            });
+            document.addEventListener('focusout', function (e) {
+                if (e.target === plate) blurredAt = performance.now();
+            });
+
+            // Search/Enter on the keyboard: close it straight away, without waiting for the server.
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' && isPlate(e.target)) e.target.blur();
+            });
+            // Submitting the homepage quote form: close the keyboard and forget the box, so the
+            // quote page that replaces it does not re-open the keyboard.
+            document.addEventListener('submit', function () {
+                plate = null;
+                dfHideKeyboard();
+            }, true);
+
+            // The quote page is first shown as plain HTML and then swapped for the live version a
+            // moment later. If the visitor had already tapped the plate box, that swap removed the
+            // focused box and the keyboard dropped, so a second tap was needed. Here the focus (and
+            // anything already typed) is handed to the replacement box in the same instant, so the
+            // keyboard stays open.
+            new MutationObserver(function () {
+                if (!plate || plate.isConnected) return;
+                var old = plate;
+                var wasFocused = !blurredAt || (performance.now() - blurredAt) < 150;
+                plate = null;
+                if (!wasFocused) return;
+                var next = document.querySelector('.uk-plate-input');
+                if (!next || next === old) return;
+                if (old.value && next.value !== old.value) {
+                    next.value = old.value;
+                    next.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                next.focus({ preventScroll: true });
+                try { next.setSelectionRange(next.value.length, next.value.length); } catch (err) { }
+            }).observe(document.documentElement, { childList: true, subtree: true });
+        })();
+
+        // ── Quote wizard steps in the browser history ──────────────────────────────
+        // Each step forward adds a history entry (/quote#step-3), so the phone's Back button goes
+        // back one step instead of leaving the quote. The wizard (server side) stays in charge of
+        // which step is really shown; the address bar is corrected to match its answer.
+        window.dfWizard = (function () {
+            var ref = null, cur = 1;
+
+            function hashStep() {
+                var m = /^#step-([2-5])$/.exec(location.hash);
+                return m ? parseInt(m[1], 10) : 1;
+            }
+            function urlFor(step) {
+                return location.pathname + location.search + (step > 1 ? '#step-' + step : '');
+            }
+            function show(want) {
+                if (!ref) return;
+                ref.invokeMethodAsync('OnHistoryStep', want).then(function (actual) {
+                    cur = actual;
+                    if (hashStep() !== actual) history.replaceState(history.state, '', urlFor(actual));
+                    window.scrollTo({ top: 0, left: 0 });
+                }, function () { });
+            }
+            // Runs before Blazor's own Back/Forward handling and stops it for step changes:
+            // otherwise every step back would also re-download the whole quote page.
+            function onPop(e) {
+                if (!ref || location.pathname !== '/quote') return;
+                e.stopImmediatePropagation();
+                show(hashStep());
+            }
+
+            return {
+                init: function (dotnetRef) {
+                    ref = dotnetRef;
+                    cur = 1;
+                    // A fresh wizard always starts on step 1 (e.g. after a page reload on a later step).
+                    if (hashStep() !== 1) history.replaceState(history.state, '', urlFor(1));
+                },
+                push: function (step) {
+                    if (hashStep() !== step) history.pushState(history.state, '', urlFor(step));
+                    cur = step;
+                },
+                back: function () {
+                    if (cur > 1 && hashStep() === cur) history.back();
+                    else show(Math.max(1, cur - 1));
+                },
+                onPop: onPop,
+                dispose: function () {
+                    ref = null;
+                }
+            };
         })();
     </script>
 </body>

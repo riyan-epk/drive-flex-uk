@@ -15,7 +15,20 @@ builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents(options =>
+    {
+        // A phone drops the live connection whenever the visitor switches tab or app (to check an
+        // email, a banking app, their licence...). Keep their session on the server for 30 minutes
+        // instead of the default 3, so coming back resumes the quote where they left it rather
+        // than reloading the page and losing what they typed.
+        options.DisconnectedCircuitRetentionPeriod = TimeSpan.FromMinutes(30);
+        options.DisconnectedCircuitMaxRetained = 500;
+    });
+
+// Compress pages and the Blazor script on the way out. Static files are already pre-compressed
+// by MapStaticAssets; this covers the HTML and _framework/blazor.web.js, which otherwise go out
+// at full size unless the Nginx gzip drop-in happens to be installed on the server.
+builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
 
 // Persistent SQLite database — quotes, policies, drivers and admin-managed settings
 // (Stripe/DVSA/SMTP keys, admin password) survive application restarts.
@@ -109,6 +122,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseResponseCompression();
 app.UseRateLimiter();
 app.UseAntiforgery();
 
