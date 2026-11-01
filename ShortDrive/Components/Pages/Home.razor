@@ -293,8 +293,8 @@
 </div>
 
 @code {
-    // Longest cover on sale: 7 days, or 28 while long cover is switched on in Admin → Pricing.
-    private int _maxDays = QuoteService.StandardMaxCoverHours / 24;
+    // Longest cover on sale: 7, 14 or 28 days, set in Admin → Pricing.
+    private int _maxDays = QuoteService.DefaultMaxCoverDays;
 
     private string MaxDaysInWords => _maxDays switch
     {

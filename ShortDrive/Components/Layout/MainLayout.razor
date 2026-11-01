@@ -119,7 +119,7 @@
 @code {
     // Shows the footer "Cookie Settings" link only when Google Analytics (and so the banner) is on.
     private bool _analyticsEnabled;
-    private int _maxDays = QuoteService.StandardMaxCoverHours / 24;
+    private int _maxDays = QuoteService.DefaultMaxCoverDays;
 
     protected override async Task OnInitializedAsync()
     {

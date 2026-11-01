@@ -8,13 +8,15 @@
 
 ---
 
-## SESSION UPDATE — 2026-11-01 (cover capped at 7 days)
+## SESSION UPDATE — 2026-11-01 (longest cover: 7, 14 or 28 days)
 
-**Customers can now buy 1 hour up to 7 days only.** The 14- and 28-day plans are off by default and can be
-turned back on in Admin → **Pricing** → "Sell cover longer than 7 days (14 & 28 day plans)" → Save
-(the 28-day rate field only shows while it is on). Stored in `PricingSettings.AllowLongCover`
-(column auto-added at startup in `Program.cs`, default 0 = off).
-- One source of truth in `QuoteService`: `DurationOptions` (all lengths) and `GetMaxCoverHoursAsync()` (168 or 672,
+**Customers can buy 1 hour up to 7 days by default.** Admin → **Pricing** → "Longest cover customers can buy"
+picks 7, 14 or 28 days → Save. The 14-day and 28-day rate fields only show when that length is on sale.
+Stored in `PricingSettings.MaxCoverDays` (column auto-added at startup in `Program.cs`, default 7; the short-lived
+`AllowLongCover` switch column is left in the DB unused, and a site that had it on was moved to 28).
+- New 14-day price tier `PricingSettings.FourteenDayRate`. 0 (existing databases) = on the old 7 → 28 day line,
+  so prices did not change; the admin panel pre-fills that figure until it is saved.
+- One source of truth in `QuoteService`: `DurationOptions` (all lengths) and `GetMaxCoverHoursAsync()` (7/14/28 days,
   read fresh from the DB every time, never from the circuit's tracked settings entity). The wizard only lists
   allowed lengths and validates on "Continue" and again right before checkout.
 - Enforced server-side: `CalculateAndSaveAsync` throws for a longer cover, so a tampered circuit can't buy one,
@@ -310,5 +312,5 @@ Admin panel: `/admin` (login `/admin/login`). Dev password: `DriveFlex2024!`.
   page starts the lookup during prerender (`WarmLookup`) so the result is ready when the live connection is.
 - `<ReconnectModal />` is rendered from `MainLayout`. It stays hidden for the first 4 seconds of a
   reconnect (tab/app switching on phones); disconnected sessions are kept for 30 minutes (`Program.cs`).
-- Multi-day prices are a sliding scale between the admin tiers (1 day / 7 days / 28 days), NOT
+- Multi-day prices are a sliding scale between the admin tiers (1 day / 7 / 14 / 28 days), NOT
   days × the 1-day rate: e.g. 1 day £26.50 and 7 days £58.50 gives 3 days = 26.50 + 2 × (58.50 − 26.50)/6 = £37.17.

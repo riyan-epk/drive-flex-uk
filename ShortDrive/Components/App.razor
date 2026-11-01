@@ -347,7 +347,7 @@
 
 @code {
     private string? _analyticsId;
-    private int _maxDays = QuoteService.StandardMaxCoverHours / 24;
+    private int _maxDays = QuoteService.DefaultMaxCoverDays;
 
     protected override async Task OnInitializedAsync()
     {

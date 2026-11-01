@@ -98,9 +98,20 @@ using (var scope = app.Services.CreateScope())
         "ALTER TABLE \"PricingSettings\" ADD COLUMN \"OwnerNotifyEmail\" TEXT;"); }
     catch { /* column already exists */ }
 
-    // Add AllowLongCover column if missing (safe no-op on fresh databases). Defaults to off: 7 days max.
+    // Add MaxCoverDays column if missing (safe no-op on fresh databases). Defaults to 7 days; a site
+    // that had the earlier "long cover" switch on keeps selling 28 days.
+    try
+    {
+        await db.Database.ExecuteSqlRawAsync(
+            "ALTER TABLE \"PricingSettings\" ADD COLUMN \"MaxCoverDays\" INTEGER NOT NULL DEFAULT 7;");
+        await db.Database.ExecuteSqlRawAsync(
+            "UPDATE \"PricingSettings\" SET \"MaxCoverDays\" = 28 WHERE \"AllowLongCover\" = 1;");
+    }
+    catch { /* column already exists, or there was no earlier switch */ }
+
+    // Add FourteenDayRate column if missing. 0 = priced on the 7 → 28 day line, as before it existed.
     try { await db.Database.ExecuteSqlRawAsync(
-        "ALTER TABLE \"PricingSettings\" ADD COLUMN \"AllowLongCover\" INTEGER NOT NULL DEFAULT 0;"); }
+        "ALTER TABLE \"PricingSettings\" ADD COLUMN \"FourteenDayRate\" TEXT NOT NULL DEFAULT '0.0';"); }
     catch { /* column already exists */ }
 
     await SiteContent.SeedAsync(db);

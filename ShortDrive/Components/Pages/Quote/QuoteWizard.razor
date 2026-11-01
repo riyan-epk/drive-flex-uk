@@ -295,7 +295,7 @@
             @{
                 var durations = QuoteService.DurationOptions.Where(o => o.Hours <= _maxCoverHours).ToArray();
             }
-            <div class="df-duration-grid" style="--dur-cols: @durations.Length; --dur-cols-sm: @(durations.Length % 3 == 0 ? 3 : 2);">
+            <div class="df-duration-grid" style="--dur-cols: @durations.Length; --dur-cols-sm: @(durations.Length <= 4 ? 2 : 3);">
                 @foreach (var opt in durations)
                 {
                     <button type="button" class="df-duration-btn @(_cover.DurationHours == opt.Hours ? "active" : "")"
@@ -559,7 +559,7 @@
     private DriverFormModel _driver = new();
     private CoverModel _cover = new();
     private PricingSettings? _pricingSettings;
-    private int _maxCoverHours = QuoteService.StandardMaxCoverHours;
+    private int _maxCoverHours = QuoteService.DefaultMaxCoverDays * 24;
     private QuoteResult? _latestQuote;
 
     // Rate-limit key for vehicle lookups. Best-effort client IP (available during the
@@ -955,7 +955,7 @@
 
             var durationLabel = quote.DurationHours switch
             {
-                1 => "1 Hour", 24 => "1 Day", 168 => "7 Days", 672 => "28 Days",
+                1 => "1 Hour", 24 => "1 Day", 168 => "7 Days", 336 => "14 Days", 672 => "28 Days",
                 _ when quote.DurationHours < 24 => $"{quote.DurationHours} Hours",
                 _ => $"{quote.DurationHours / 24} Days"
             };

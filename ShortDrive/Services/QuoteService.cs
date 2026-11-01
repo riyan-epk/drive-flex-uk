@@ -69,6 +69,7 @@ public class CoverModel
         24 => "1 Day",
         < 24 => $"{DurationHours} Hours",
         168 => "7 Days",
+        336 => "14 Days",
         672 => "28 Days",
         _ => $"{DurationHours / 24} Days"
     };
@@ -93,11 +94,13 @@ public class QuoteService
     private const string AnalyticsIdCacheKey = "df:analytics-id";
     private const string MaxCoverDaysCacheKey = "df:max-cover-days";
 
-    /// <summary>Longest cover sold while the 14/28-day plans are switched off (Admin → Pricing).</summary>
-    public const int StandardMaxCoverHours = 168;
+    /// <summary>The longest-cover choices in Admin → Pricing, in days.</summary>
+    public static readonly int[] MaxCoverDayChoices = [7, 14, 28];
 
-    /// <summary>Longest cover sold while they are switched on.</summary>
-    public const int ExtendedMaxCoverHours = 672;
+    public const int DefaultMaxCoverDays = 7;
+
+    public static int NormalizeMaxCoverDays(int days) =>
+        MaxCoverDayChoices.Contains(days) ? days : DefaultMaxCoverDays;
 
     /// <summary>Every cover length the quote wizard can offer, shortest first.</summary>
     public static readonly (int Hours, string Number, string Unit)[] DurationOptions =
@@ -140,7 +143,7 @@ public class QuoteService
     }
 
     /// <summary>
-    /// Longest cover currently sold, in days (7, or 28 with long cover on). Shown in marketing copy
+    /// Longest cover currently sold, in days (7, 14 or 28, set in Admin → Pricing). Shown in marketing copy
     /// on every page render, so it is cached and invalidated when the admin saves settings.
     /// </summary>
     public async Task<int> GetMaxCoverDaysAsync(CancellationToken ct = default)
@@ -160,8 +163,8 @@ public class QuoteService
     /// </summary>
     public async Task<int> GetMaxCoverHoursAsync(CancellationToken ct = default)
     {
-        var allowLong = await _db.PricingSettings.Select(s => s.AllowLongCover).FirstOrDefaultAsync(ct);
-        return allowLong ? ExtendedMaxCoverHours : StandardMaxCoverHours;
+        var days = await _db.PricingSettings.Select(s => s.MaxCoverDays).FirstOrDefaultAsync(ct);
+        return NormalizeMaxCoverDays(days) * 24;
     }
 
     public async Task<PricingSettings> GetPricingSettingsAsync(CancellationToken ct = default)
@@ -182,8 +185,9 @@ public class QuoteService
         existing.OneHourRate = updated.OneHourRate;
         existing.OneDayRate = updated.OneDayRate;
         existing.SevenDayRate = updated.SevenDayRate;
+        existing.FourteenDayRate = updated.FourteenDayRate;
         existing.TwentyEightDayRate = updated.TwentyEightDayRate;
-        existing.AllowLongCover = updated.AllowLongCover;
+        existing.MaxCoverDays = NormalizeMaxCoverDays(updated.MaxCoverDays);
         _cache.Remove(MaxCoverDaysCacheKey);
         existing.CarMultiplier = updated.CarMultiplier;
         existing.VanMultiplier = updated.VanMultiplier;
@@ -461,7 +465,7 @@ public class QuoteService
     }
 
     /// <summary>
-    /// Duration base rate. The four configured tiers (1h, 1 day, 7 days, 28 days) are the
+    /// Duration base rate. The five configured tiers (1h, 1 day, 7, 14 and 28 days) are the
     /// anchor points; every duration in between is interpolated on a per-day basis so pricing
     /// is continuous and strictly increasing with duration. Previously the 2–7 day band all
     /// mapped to the flat 7-day rate, so a 3-day cover was charged the same as 7 days.
@@ -472,6 +476,10 @@ public class QuoteService
         var oneDay = Math.Max(0m, s.OneDayRate);
         var sevenDay = s.SevenDayRate > 0 ? s.SevenDayRate : oneDay * 7m;
         var twentyEight = s.TwentyEightDayRate > 0 ? s.TwentyEightDayRate : sevenDay * 4m;
+        // No 14-day rate set (databases from before it existed): keep it on the 7 → 28 day line.
+        var fourteen = s.FourteenDayRate > 0
+            ? s.FourteenDayRate
+            : Math.Round(sevenDay + (twentyEight - sevenDay) / 3m, 2, MidpointRounding.AwayFromZero);
 
         if (durationHours <= 1) return oneHour;
         if (durationHours <= 24) return oneDay;
@@ -486,8 +494,14 @@ public class QuoteService
 
         if (days >= 28) return twentyEight;
 
-        var perExtraDayLong = (twentyEight - sevenDay) / 21m;
-        return Math.Round(sevenDay + perExtraDayLong * (days - 7), 2, MidpointRounding.AwayFromZero);
+        if (days <= 14)
+        {
+            var perExtraDayMid = (fourteen - sevenDay) / 7m;
+            return Math.Round(sevenDay + perExtraDayMid * (days - 7), 2, MidpointRounding.AwayFromZero);
+        }
+
+        var perExtraDayLong = (twentyEight - fourteen) / 14m;
+        return Math.Round(fourteen + perExtraDayLong * (days - 14), 2, MidpointRounding.AwayFromZero);
     }
 }
 

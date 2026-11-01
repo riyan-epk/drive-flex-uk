@@ -8,10 +8,12 @@ public class PricingSettings
     public decimal OneHourRate { get; set; } = 8.00m;
     public decimal OneDayRate { get; set; } = 33.25m;
     public decimal SevenDayRate { get; set; } = 78.50m;
+    // 0 = not set yet: priced on the straight line between the 7- and 28-day rates.
+    public decimal FourteenDayRate { get; set; } = 114.00m;
     public decimal TwentyEightDayRate { get; set; } = 185.00m;
 
-    // Cover longer than 7 days (the 14- and 28-day plans). Off = customers can buy 7 days at most.
-    public bool AllowLongCover { get; set; }
+    // Longest cover customers can buy: 7, 14 or 28 days (Admin → Pricing).
+    public int MaxCoverDays { get; set; } = 7;
 
     // Vehicle Class Multipliers
     public decimal CarMultiplier { get; set; } = 1.00m;
