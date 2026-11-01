@@ -16,7 +16,7 @@
     <meta property="og:image" content="https://drive-flex.uk/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Drive-Flex — flexible temporary motor insurance from 1 hour to 28 days" />
+    <meta property="og:image:alt" content="Drive-Flex — flexible temporary motor insurance from 1 hour to @_maxDays days" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content="https://drive-flex.uk/og-image.png" />
 
@@ -30,7 +30,7 @@
       "image": "https://drive-flex.uk/favicon.png",
       "logo": "https://drive-flex.uk/favicon.png",
       "email": "supportdriveflex@@gmail.com",
-      "description": "Flexible short-term UK motor insurance for cars, vans, bikes and campers — fully comprehensive cover from 1 hour to 28 days, underwritten by ERS.",
+      "description": "Flexible short-term UK motor insurance for cars, vans, bikes and campers — fully comprehensive cover from 1 hour to @_maxDays days, underwritten by ERS.",
       "areaServed": { "@@type": "Country", "name": "United Kingdom" },
       "knowsAbout": ["Temporary car insurance", "Short-term van insurance", "Learner driver insurance", "Temporary motorbike insurance", "Campervan insurance"],
       "priceRange": "From £8",
@@ -347,9 +347,11 @@
 
 @code {
     private string? _analyticsId;
+    private int _maxDays = QuoteService.StandardMaxCoverHours / 24;
 
     protected override async Task OnInitializedAsync()
     {
         _analyticsId = await QuoteSvc.GetAnalyticsIdAsync();
+        _maxDays = await QuoteSvc.GetMaxCoverDaysAsync();
     }
 }

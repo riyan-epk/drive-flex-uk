@@ -56,7 +56,7 @@
                             <span class="brand-drive">Drive</span><span class="brand-flex">Flex</span>
                         </a>
                         <p class="df-footer-regulatory">
-                            Temporary motor insurance in the UK. Instant comprehensive cover from 1 hour to 28 days.
+                            Temporary motor insurance in the UK. Instant comprehensive cover from 1 hour to @_maxDays days.
                         </p>
                     </div>
                 </div>
@@ -119,9 +119,11 @@
 @code {
     // Shows the footer "Cookie Settings" link only when Google Analytics (and so the banner) is on.
     private bool _analyticsEnabled;
+    private int _maxDays = QuoteService.StandardMaxCoverHours / 24;
 
     protected override async Task OnInitializedAsync()
     {
         _analyticsEnabled = await QuoteSvc.GetAnalyticsIdAsync() is not null;
+        _maxDays = await QuoteSvc.GetMaxCoverDaysAsync();
     }
 }

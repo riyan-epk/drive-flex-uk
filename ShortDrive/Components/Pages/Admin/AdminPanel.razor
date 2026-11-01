@@ -144,6 +144,22 @@ else
                     <div class="p-4 bg-white rounded-4 border h-100 shadow-sm">
                         <h5 class="fw-bold mb-3">Duration Base Rates (£)</h5>
                         <p class="small text-muted">Standard starting rates before risk and class weighting.</p>
+                        <div class="p-3 mb-3 rounded-3 border @(_settings.AllowLongCover ? "border-warning bg-warning-subtle" : "bg-light")">
+                            <div class="form-check form-switch mb-1">
+                                <input class="form-check-input" type="checkbox" id="longCoverSwitch" @bind="_settings.AllowLongCover" />
+                                <label class="form-check-label small fw-semibold" for="longCoverSwitch">Sell cover longer than 7 days (14 &amp; 28 day plans)</label>
+                            </div>
+                            <div class="form-text small mb-0">
+                                @if (_settings.AllowLongCover)
+                                {
+                                    <span>On: customers can buy up to 28 days. Turn off to limit every policy to 7 days.</span>
+                                }
+                                else
+                                {
+                                    <span>Off: customers can only buy 1 hour up to 7 days. The 14 and 28 day options are hidden and refused at checkout.</span>
+                                }
+                            </div>
+                        </div>
                         <div class="mb-3">
                             <label class="form-label small fw-semibold">1 Hour Rate (£)</label>
                             <input type="number" step="0.50" class="form-control" @bind="_settings.OneHourRate" />
@@ -156,10 +172,13 @@ else
                             <label class="form-label small fw-semibold">7 Days Rate (£)</label>
                             <input type="number" step="0.50" class="form-control" @bind="_settings.SevenDayRate" />
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label small fw-semibold">28 Days Rate (£)</label>
-                            <input type="number" step="1.00" class="form-control" @bind="_settings.TwentyEightDayRate" />
-                        </div>
+                        @if (_settings.AllowLongCover)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold">28 Days Rate (£)</label>
+                                <input type="number" step="1.00" class="form-control" @bind="_settings.TwentyEightDayRate" />
+                            </div>
+                        }
                     </div>
                 </div>
                 <div class="col-lg-6">

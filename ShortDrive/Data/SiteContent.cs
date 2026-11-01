@@ -15,7 +15,7 @@ public static class SiteContent
             <p>Drive-Flex provides flexible, short-term motor insurance for drivers across the United Kingdom.
             Whether you are borrowing a car, practising as a learner, moving a van for the day or bridging a
             gap between annual policies, we make it simple to get fully comprehensive cover in minutes — from
-            one hour to twenty-eight days.</p>
+            one hour to seven days.</p>
 
             <h2>What we do</h2>
             <p>We combine live DVLA and MOT vehicle checks with instant quotes and secure card payment, so you
@@ -94,7 +94,7 @@ public static class SiteContent
 
             <h2>Your policy</h2>
             <p>Cover begins at the start time you select and lasts for the duration you choose (from one hour to
-            twenty-eight days). Your Certificate of Motor Insurance sets out exactly what is covered. Please read
+            seven days). Your Certificate of Motor Insurance sets out exactly what is covered. Please read
             it carefully and make sure the details are correct.</p>
 
             <h2>Your responsibilities</h2>

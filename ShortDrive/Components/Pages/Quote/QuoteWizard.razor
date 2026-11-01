@@ -11,7 +11,7 @@
 @implements IAsyncDisposable
 
 <SeoHead Title="Get an Instant Temporary Insurance Quote | Drive-Flex"
-         Description="Enter your registration for an instant temporary motor insurance quote. Comprehensive cover for cars, vans, bikes and campers from 1 hour to 28 days. No auto-renewal — pay only for what you need."
+         Description="@($"Enter your registration for an instant temporary motor insurance quote. Comprehensive cover for cars, vans, bikes and campers from 1 hour to {_maxCoverHours / 24} days. No auto-renewal — pay only for what you need.")"
          Path="/quote" />
 
 <div class="container py-4" style="max-width: 920px; min-height: 80vh;">
@@ -292,14 +292,17 @@
         <div class="df-duration-panel mb-4">
             <div class="section-label mb-1">COVER DURATION</div>
             <p class="small text-muted mb-0">Tap how long you need cover for.</p>
-            <div class="df-duration-grid">
-                @foreach (var opt in new[] { (1, "1", "Hour"), (24, "1", "Day"), (72, "3", "Days"), (168, "7", "Days"), (336, "14", "Days"), (672, "28", "Days") })
+            @{
+                var durations = QuoteService.DurationOptions.Where(o => o.Hours <= _maxCoverHours).ToArray();
+            }
+            <div class="df-duration-grid" style="--dur-cols: @durations.Length; --dur-cols-sm: @(durations.Length % 3 == 0 ? 3 : 2);">
+                @foreach (var opt in durations)
                 {
-                    <button type="button" class="df-duration-btn @(_cover.DurationHours == opt.Item1 ? "active" : "")"
-                            aria-pressed="@(_cover.DurationHours == opt.Item1)"
-                            @onclick="() => _cover.DurationHours = opt.Item1">
-                        <span class="dur-num">@opt.Item2</span>
-                        <span class="dur-unit">@opt.Item3</span>
+                    <button type="button" class="df-duration-btn @(_cover.DurationHours == opt.Hours ? "active" : "")"
+                            aria-pressed="@(_cover.DurationHours == opt.Hours)"
+                            @onclick="() => _cover.DurationHours = opt.Hours">
+                        <span class="dur-num">@opt.Number</span>
+                        <span class="dur-unit">@opt.Unit</span>
                     </button>
                 }
             </div>
@@ -556,6 +559,7 @@
     private DriverFormModel _driver = new();
     private CoverModel _cover = new();
     private PricingSettings? _pricingSettings;
+    private int _maxCoverHours = QuoteService.StandardMaxCoverHours;
     private QuoteResult? _latestQuote;
 
     // Rate-limit key for vehicle lookups. Best-effort client IP (available during the
@@ -570,6 +574,9 @@
             _clientKey = ip;
 
         _pricingSettings = await QuoteSvc.GetPricingSettingsAsync();
+        _maxCoverHours = await QuoteSvc.GetMaxCoverHoursAsync();
+        if (_cover.DurationHours > _maxCoverHours)
+            _cover.DurationHours = _maxCoverHours;
 
         // Returning from a cancelled Stripe checkout — show a friendly banner with retry option.
         if (QueryCancelled == "1" && CancelledQuoteId > 0)
@@ -861,6 +868,9 @@
         if (_cover.StartDateLocal > UkTime.Now.AddYears(1))
             return "Cover start time is too far in the future.";
 
+        if (_cover.DurationHours < 1 || _cover.DurationHours > _maxCoverHours)
+            return $"Cover is available for up to {_maxCoverHours / 24} days. Please choose a shorter duration.";
+
         return null;
     }
 
@@ -869,7 +879,9 @@
         if (_vehicle is null) return;
         if (_isProcessing) return; // guard against double-click / duplicate checkout sessions
 
-        // Re-validate on the server before taking payment — the UI can be bypassed.
+        // Re-validate on the server before taking payment — the UI can be bypassed. The cover cap
+        // is re-read too, in case the admin switched long cover off while this page was open.
+        _maxCoverHours = await QuoteSvc.GetMaxCoverHoursAsync();
         var error = ValidateDriverAndCover();
         if (error is not null)
         {
@@ -927,6 +939,16 @@
             if (quote is null)
             {
                 _paymentError = "Quote not found. Please start a new quote.";
+                _isProcessing = false;
+                return;
+            }
+
+            // A quote saved before longer plans were switched off must not be paid for now.
+            var maxHours = await QuoteSvc.GetMaxCoverHoursAsync();
+            if (quote.DurationHours > maxHours)
+            {
+                _paymentError = $"That quote was for longer cover than we currently offer (up to {maxHours / 24} days). Please start a new quote.";
+                _showCancelledBanner = false;
                 _isProcessing = false;
                 return;
             }

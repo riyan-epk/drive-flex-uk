@@ -4,9 +4,25 @@
 > been done, how it was verified, and what still remains. If the chat is deleted, read this
 > first — it tells you the full state so you can continue without re-discovering everything.
 >
-> **Last updated:** 2026-10-01
+> **Last updated:** 2026-11-01
 
 ---
+
+## SESSION UPDATE — 2026-11-01 (cover capped at 7 days)
+
+**Customers can now buy 1 hour up to 7 days only.** The 14- and 28-day plans are off by default and can be
+turned back on in Admin → **Pricing** → "Sell cover longer than 7 days (14 & 28 day plans)" → Save
+(the 28-day rate field only shows while it is on). Stored in `PricingSettings.AllowLongCover`
+(column auto-added at startup in `Program.cs`, default 0 = off).
+- One source of truth in `QuoteService`: `DurationOptions` (all lengths) and `GetMaxCoverHoursAsync()` (168 or 672,
+  read fresh from the DB every time, never from the circuit's tracked settings entity). The wizard only lists
+  allowed lengths and validates on "Continue" and again right before checkout.
+- Enforced server-side: `CalculateAndSaveAsync` throws for a longer cover, so a tampered circuit can't buy one,
+  and "Retry payment" refuses an older unpaid quote that is longer than the current maximum.
+  Policies already paid for are untouched.
+- Marketing copy (Home, footer, page descriptions, JSON-LD) reads the cap through the cached
+  `GetMaxCoverDaysAsync()` and follows the switch. The About / Terms seed text now says seven days, but that
+  only applies to new databases: on the live site edit those pages in Admin → **Content Pages**.
 
 ## SESSION UPDATE — 2026-10-01 (site speed)
 

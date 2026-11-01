@@ -688,7 +688,7 @@ main { animation: df-fade-in-up 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
 
 /* Duration picker */
 .df-duration-panel { background: var(--df-bg-card); border: 1px solid var(--df-border); border-radius: var(--df-radius-card); padding: 1.6rem; margin-bottom: 1.5rem; box-shadow: var(--df-shadow-card); }
-.df-duration-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 0.6rem; margin-top: 0.9rem; }
+.df-duration-grid { display: grid; grid-template-columns: repeat(var(--dur-cols, 6), 1fr); gap: 0.6rem; margin-top: 0.9rem; }
 .df-duration-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15rem; padding: 0.95rem 0.4rem; border: 1.5px solid var(--df-border); border-radius: var(--df-radius-md); background: #fff; cursor: pointer; transition: all var(--df-transition); position: relative; overflow: hidden; }
 .df-duration-btn:hover:not(.active) { border-color: var(--df-primary); box-shadow: var(--df-shadow-sm); transform: translateY(-2px); }
 .df-duration-btn .dur-num { font-family: var(--df-font-heading); font-size: 1.5rem; line-height: 1; color: var(--df-navy); transition: color var(--df-transition); }
@@ -955,7 +955,7 @@ main { animation: df-fade-in-up 0.4s cubic-bezier(0.22, 1, 0.36, 1); }
     .df-vehicle-grid { grid-template-columns: 1fr 1fr; gap: 0.85rem; }
     .df-vehicle-title { font-size: 1.2rem; }
     .df-vehicle-body { padding: 1rem 1rem 1.15rem; }
-    .df-duration-grid { grid-template-columns: repeat(3, 1fr); }
+    .df-duration-grid { grid-template-columns: repeat(var(--dur-cols-sm, 3), 1fr); }
     .df-duration-btn .dur-num { font-size: 1.3rem; }
 }
 

@@ -91,6 +91,20 @@ public class QuoteResult
 public class QuoteService
 {
     private const string AnalyticsIdCacheKey = "df:analytics-id";
+    private const string MaxCoverDaysCacheKey = "df:max-cover-days";
+
+    /// <summary>Longest cover sold while the 14/28-day plans are switched off (Admin → Pricing).</summary>
+    public const int StandardMaxCoverHours = 168;
+
+    /// <summary>Longest cover sold while they are switched on.</summary>
+    public const int ExtendedMaxCoverHours = 672;
+
+    /// <summary>Every cover length the quote wizard can offer, shortest first.</summary>
+    public static readonly (int Hours, string Number, string Unit)[] DurationOptions =
+    [
+        (1, "1", "Hour"), (24, "1", "Day"), (72, "3", "Days"),
+        (168, "7", "Days"), (336, "14", "Days"), (672, "28", "Days")
+    ];
 
     private readonly AppDbContext _db;
     private readonly ILogger<QuoteService> _logger;
@@ -125,6 +139,31 @@ public class QuoteService
         return id;
     }
 
+    /// <summary>
+    /// Longest cover currently sold, in days (7, or 28 with long cover on). Shown in marketing copy
+    /// on every page render, so it is cached and invalidated when the admin saves settings.
+    /// </summary>
+    public async Task<int> GetMaxCoverDaysAsync(CancellationToken ct = default)
+    {
+        if (_cache.TryGetValue(MaxCoverDaysCacheKey, out int cached))
+            return cached;
+
+        var days = await GetMaxCoverHoursAsync(ct) / 24;
+        _cache.Set(MaxCoverDaysCacheKey, days, TimeSpan.FromMinutes(10));
+        return days;
+    }
+
+    /// <summary>
+    /// Longest cover currently sold, in hours. Always read straight from the database (not the
+    /// cache, not the tracked settings entity) so a quote page left open can't sell longer cover
+    /// after the admin switches it off.
+    /// </summary>
+    public async Task<int> GetMaxCoverHoursAsync(CancellationToken ct = default)
+    {
+        var allowLong = await _db.PricingSettings.Select(s => s.AllowLongCover).FirstOrDefaultAsync(ct);
+        return allowLong ? ExtendedMaxCoverHours : StandardMaxCoverHours;
+    }
+
     public async Task<PricingSettings> GetPricingSettingsAsync(CancellationToken ct = default)
     {
         var settings = await _db.PricingSettings.FirstOrDefaultAsync(ct);
@@ -144,6 +183,8 @@ public class QuoteService
         existing.OneDayRate = updated.OneDayRate;
         existing.SevenDayRate = updated.SevenDayRate;
         existing.TwentyEightDayRate = updated.TwentyEightDayRate;
+        existing.AllowLongCover = updated.AllowLongCover;
+        _cache.Remove(MaxCoverDaysCacheKey);
         existing.CarMultiplier = updated.CarMultiplier;
         existing.VanMultiplier = updated.VanMultiplier;
         existing.BikeMultiplier = updated.BikeMultiplier;
@@ -198,6 +239,13 @@ public class QuoteService
         CancellationToken ct = default)
     {
         var settings = await GetPricingSettingsAsync(ct);
+
+        // The wizard only offers allowed lengths, but the UI can be bypassed: never price or sell
+        // cover longer than the admin currently allows.
+        var maxHours = await GetMaxCoverHoursAsync(ct);
+        if (cover.DurationHours < 1 || cover.DurationHours > maxHours)
+            throw new InvalidOperationException(
+                $"Cover of {cover.DurationHours} hours is not offered (maximum {maxHours} hours).");
 
         // Single source of truth for pricing — shared with the live quote display.
         var pricing = ComputePremium(cover, driver, settings);

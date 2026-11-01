@@ -98,6 +98,11 @@ using (var scope = app.Services.CreateScope())
         "ALTER TABLE \"PricingSettings\" ADD COLUMN \"OwnerNotifyEmail\" TEXT;"); }
     catch { /* column already exists */ }
 
+    // Add AllowLongCover column if missing (safe no-op on fresh databases). Defaults to off: 7 days max.
+    try { await db.Database.ExecuteSqlRawAsync(
+        "ALTER TABLE \"PricingSettings\" ADD COLUMN \"AllowLongCover\" INTEGER NOT NULL DEFAULT 0;"); }
+    catch { /* column already exists */ }
+
     await SiteContent.SeedAsync(db);
 }
 
