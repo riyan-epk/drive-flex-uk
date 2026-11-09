@@ -79,47 +79,43 @@
     <link rel="stylesheet" href="@Assets["ShortDrive.styles.css"]" />
     <ImportMap />
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=2" />
-    @if (_analyticsId is not null)
-    {
-        @* Google Analytics 4 with Consent Mode v2. Everything defaults to "denied" (no cookies) until
-           the visitor accepts the cookie banner; the choice is remembered in the df_consent cookie. *@
-        <script>
-            window.dataLayer = window.dataLayer || [];
-            function gtag() { dataLayer.push(arguments); }
-            (function () {
-                var m = document.cookie.match(/(?:^|; )df_consent=(granted|denied)/);
-                var state = m && m[1] === 'granted' ? 'granted' : 'denied';
-                gtag('consent', 'default', {
-                    ad_storage: state, ad_user_data: state, ad_personalization: state, analytics_storage: state
-                });
-            })();
-            gtag('set', 'ads_data_redaction', true);
-            gtag('js', new Date());
-            gtag('config', '@_analyticsId');
-        </script>
-        <script async src="https://www.googletagmanager.com/gtag/js?id=@_analyticsId"></script>
-    }
+    @* Google tag with Consent Mode v2: the Google Ads account tag (always on) plus Google Analytics 4
+       when its Measurement ID is set in the admin panel, sharing one gtag.js. Everything defaults to
+       "denied" (no cookies) until the visitor accepts the cookie banner; the choice is remembered in
+       the df_consent cookie. *@
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        (function () {
+            var m = document.cookie.match(/(?:^|; )df_consent=(granted|denied)/);
+            var state = m && m[1] === 'granted' ? 'granted' : 'denied';
+            gtag('consent', 'default', {
+                ad_storage: state, ad_user_data: state, ad_personalization: state, analytics_storage: state
+            });
+        })();
+        gtag('set', 'ads_data_redaction', true);
+        gtag('js', new Date());
+        ['@(_analyticsId)', '@GoogleAdsId'].forEach(function (id) { if (id) gtag('config', id); });
+    </script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=@(_analyticsId ?? GoogleAdsId)"></script>
     <HeadOutlet />
 </head>
 
 <body>
     <Routes />
-    @if (_analyticsId is not null)
-    {
-        @* data-permanent keeps the banner (and its shown/hidden state) untouched by enhanced navigation. *@
-        <div id="dfCookieBanner" class="df-cookie" data-permanent="df-cookie-banner"
-             role="dialog" aria-labelledby="dfCookieTitle" hidden>
-            <div class="df-cookie-title" id="dfCookieTitle">Cookies on Drive-Flex</div>
-            <p>
-                We'd like to use analytics cookies to understand how people use our site and to measure our
-                adverts. They're only set if you accept. <a href="/privacy">Privacy Policy</a>
-            </p>
-            <div class="df-cookie-actions">
-                <button type="button" class="df-cookie-btn df-cookie-btn--ghost" onclick="dfSetConsent(false)">Reject</button>
-                <button type="button" class="df-cookie-btn df-cookie-btn--primary" onclick="dfSetConsent(true)">Accept</button>
-            </div>
+    @* data-permanent keeps the banner (and its shown/hidden state) untouched by enhanced navigation. *@
+    <div id="dfCookieBanner" class="df-cookie" data-permanent="df-cookie-banner"
+         role="dialog" aria-labelledby="dfCookieTitle" hidden>
+        <div class="df-cookie-title" id="dfCookieTitle">Cookies on Drive-Flex</div>
+        <p>
+            We'd like to use analytics cookies to understand how people use our site and to measure our
+            adverts. They're only set if you accept. <a href="/privacy">Privacy Policy</a>
+        </p>
+        <div class="df-cookie-actions">
+            <button type="button" class="df-cookie-btn df-cookie-btn--ghost" onclick="dfSetConsent(false)">Reject</button>
+            <button type="button" class="df-cookie-btn df-cookie-btn--primary" onclick="dfSetConsent(true)">Accept</button>
         </div>
-    }
+    </div>
     <script>
         // Must be registered before Blazor's script loads so it runs first: lets the quote wizard
         // handle the Back/Forward buttons for its own steps (see dfWizard below).
@@ -346,6 +342,9 @@
 </html>
 
 @code {
+    // Google Ads account tag (Google Ads → Goals → Google tag). Fixed here rather than in the admin
+    // panel; the Analytics ID below stays admin-editable.
+    private const string GoogleAdsId = "AW-11491802288";
     private string? _analyticsId;
     private int _maxDays = QuoteService.DefaultMaxCoverDays;
 

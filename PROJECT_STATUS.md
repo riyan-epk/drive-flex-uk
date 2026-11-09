@@ -4,9 +4,19 @@
 > been done, how it was verified, and what still remains. If the chat is deleted, read this
 > first — it tells you the full state so you can continue without re-discovering everything.
 >
-> **Last updated:** 2026-11-01
+> **Last updated:** 2026-11-09
 
 ---
+
+## SESSION UPDATE — 2026-11-09 (Google Ads tag)
+
+**The Google Ads account tag `AW-11491802288` is on every page** (fixes Google Ads' "Your website is missing a
+Google tag" diagnostic). It is a constant `GoogleAdsId` in `App.razor`, not an admin setting, and shares gtag.js,
+Consent Mode v2 and the cookie banner with Google Analytics, so ad cookies are still only set after Accept
+(before that Google gets cookieless pings only). The tag and banner now always render; the admin Analytics ID
+only switches GA4 on/off. Page views on enhanced navigation and the `begin_checkout` / `purchase` events go to
+both IDs. For Ads to count sales, import the GA4 `purchase` key event into Google Ads (Goals → Conversions →
+Import), or add a Google Ads conversion label.
 
 ## SESSION UPDATE — 2026-11-01 (longest cover: 7, 14 or 28 days)
 
